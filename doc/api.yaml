@@ -87,29 +87,116 @@ paths:
           content:
             application/json:
               schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user:
+                      type: string
+                      description: name of the user or group
+                    pic:
+                      type: string
+                      description: group or profile picture
+                    eta:
+                      type: string
+                      format: date-time
+                    latest_msg:
+                      type: string
+                      description: |-
+                        returns the latest message or an icon for pics
+
+    post:
+      tags: [conversations]
+      summary: start a new conversation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+              description: input name of the user to start a new conversation
+      responses:
+        "201":
+          description: new chat initialized
+          content:
+            application/json:
+              schema:
+                type: string
+                description: conversation id
+        "401":
+          description: user does not exist
+
+  /users/me/group:
+    post:
+      tags: [groups]
+      summary: create a new group
+      requestBody:
+        content:
+          application/json:
+            schema:
               type: array
               items:
                 type: object
                 properties:
                   user:
                     type: string
-                    description: name of the user or group
-                  pic:
-                    type: image/*
-                    description: group or profile picture
-                  eta:
-                    type: string
-                    format: date-time
-                  latest_msg:
-                    type: string
-                    description: -|
-                    returns an icon if the last msg is a pic otherwise txt
+        required: true
 
+      responses:
+        "201":
+          description: group succesfully created
+
+  /messages:
     post:
-      tags: [conversations]
-      summary: start a new conversation
-      operatiodId: newConversation
+      tags: [messages]
+      summary: send a new message
       requestBody:
         content:
           application/json:
+            schema:
+              type: object
+              properties:
+                conversationId:
+                  type: string
+                content:
+                  type: string
+        required: true
 
+      responses:
+        "201":
+          description: message sent
+        "400":
+          description: user id not found
+
+    delete:
+      tags: [messages]
+      summary: delete a message sent by user
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: id not found
+        '401':
+          description: Unauthorized
+
+  /users:
+    get:
+      tags: [users]
+      description: returns the list of all existing users
+      operationId: getUsersNames
+      parameters:
+        - in: query
+          name: username
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: list of all usernames that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "404":
+          description: "no username matches the query"
