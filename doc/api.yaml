@@ -104,7 +104,8 @@ paths:
                       type: string
                       description: |-
                         returns the latest message or an icon for pics
-
+  
+  /users/me/conversations/{conversationId}:
     post:
       tags: [conversations]
       summary: start a new conversation
@@ -124,8 +125,11 @@ paths:
                 description: conversation id
         "401":
           description: user does not exist
+        "404":
+          description: user not found
 
-  /users/me/group:
+
+  /users/me/groups/{groupId}:
     post:
       tags: [groups]
       summary: create a new group
@@ -144,8 +148,30 @@ paths:
       responses:
         "201":
           description: group succesfully created
+        
+    get:
+      tags: [groups]
+      summary: get group list
+      responses:
+        "200":
+          description: group list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: string
+                  admin:
+                    type: string
+        "404":
+          description: no groups found
+        
 
-  /messages:
+  users/me/conversations/{conversationId}/messages:
+
     post:
       tags: [messages]
       summary: send a new message
@@ -183,20 +209,32 @@ paths:
       tags: [users]
       description: returns the list of all existing users
       operationId: getUsersNames
-      parameters:
-        - in: query
-          name: username
-          schema:
-            type: string
-          required: true
       responses:
         "200":
-          description: list of all usernames that match the query
+          description: list of all users
           content:
             application/json:
               schema:
                 type: array
                 items:
                   type: string
+                  description: name of the user
         "404":
-          description: "no username matches the query"
+          description: no users found
+
+  get:
+    tags: [users]
+    description: returns the list of all existing users
+    operationId: getUsersNames
+    responses:
+      "200":
+        description: list of all users
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                description: name of the user
+      "404":
+        description: no users found
