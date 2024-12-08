@@ -42,19 +42,19 @@ paths:
                 minLength: 3
                 maxLength: 16
         required: true
-
-    responses:
-      '201':
-        description: User log-in action successful
-        content:
-          application/json:
-          type: object
-          properties:
-            identifier:
-              # change here if you decide to use an integer
-              # or any other type of identifier
-              type: string
-              example: "abcdef012345"
+      responses:
+        '201':
+          description: User log-in action successful
+          content:
+            application/json:
+            schema:
+                type: object
+                properties:
+                  identifier:
+                    # change here if you decide to use an integer
+                    # or any other type of identifier
+                    type: string
+                    example: "abcdef012345"
 
   /users/me:
     put:
@@ -170,9 +170,9 @@ paths:
           description: no groups found
         
 
-  users/me/conversations/{conversationId}/messages:
+  /users/me/conversations/{conversationId}/messages:
 
-    post:
+    post: 
       tags: [messages]
       summary: send a new message
       requestBody:
@@ -221,20 +221,3 @@ paths:
                   description: name of the user
         "404":
           description: no users found
-
-  get:
-    tags: [users]
-    description: returns the list of all existing users
-    operationId: getUsersNames
-    responses:
-      "200":
-        description: list of all users
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                type: string
-                description: name of the user
-      "404":
-        description: no users found
