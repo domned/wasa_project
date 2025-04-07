@@ -13,211 +13,614 @@
 ---
 openapi: 3.0.3
 info:
-  title: Simplified login API specification
-  description: |-
-      This OpenAPI document describes the simplified login API.
-      Copy and paste the API from the `paths` key to your OpenAPI document.
-  version: "1"
-paths:
-  /session:
-    post:
-      tags: ["login"]
-      summary: Logs in the user
-      description: |-
-        If the user does not exist, it will be created,
-        and an identifier is returned.
-        If the user exists, the user identifier is returned.
-      operationId: doLogin
-      requestBody:
-        description: User details
-        content:
-          application/json:
-          schema:
+    title: 'Wasatext'
+    description: |-
+        A simple chat application
+        that allows users to create groups,
+        start conversations, and send messages.
+    version: '1'
+    security:
+        - bearerAuth: []
+
+    components:
+        securitySchemes:
+            bearerAuth:
+                type: http
+                scheme: bearer
+                bearerFormat: JWT
+
+    schemas:
+        User:
             type: object
             properties:
-              name:
-                type: string
-                example: Maria
-                pattern: 'ˆ.*?$'
-                minLength: 3
-                maxLength: 16
-        required: true
-      responses:
-        '201':
-          description: User log-in action successful
-          content:
-            application/json:
-            schema:
-                type: object
-                properties:
-                  identifier:
-                    # change here if you decide to use an integer
-                    # or any other type of identifier
+                name:
                     type: string
-                    example: "abcdef012345"
-
-  /users/me:
-    put:
-      tags: ["user"]
-      summary: Set the current user's username
-      operationId: setMyUserName
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: string
-      responses:
-        '200':
-          description: Username updated successfully
-        '400':
-          description: Bad request - Username already in use
-        '401':
-          description: Unauthorized - User is not authenticated
-        '500':
-          description: Internal server error
-
-  /users/me/conversations:
-    get:
-      tags: [conversations]
-      summary: Retrieve conversations list
-      operationId: getMyConversations
-      responses:
-        "200":
-          description: list of conversations
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    user:
-                      type: string
-                      description: name of the user or group
-                    pic:
-                      type: string
-                      description: group or profile picture
-                    eta:
-                      type: string
-                      format: date-time
-                    latest_msg:
-                      type: string
-                      description: |-
-                        returns the latest message or an icon for pics
-  
-  /users/me/conversations/{conversationId}:
-    post:
-      tags: [conversations]
-      summary: start a new conversation
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: string
-              description: input name of the user to start a new conversation
-      responses:
-        "201":
-          description: new chat initialized
-          content:
-            application/json:
-              schema:
-                type: string
-                description: conversation id
-        "401":
-          description: user does not exist
-        "404":
-          description: user not found
-
-
-  /users/me/groups/{groupId}:
-    post:
-      tags: [groups]
-      summary: create a new group
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                type: object
-                properties:
-                  user:
+                    example: Maria
+                    pattern: 'ˆ.*?$'
+                    minLength: 3
+                    maxLength: 16
+                id:
                     type: string
-        required: true
+                    example: 'abcdef012345'
+                propic:
+                    type: string
+                    format: byte
+                    description: profile picture
+                required:
+                    - name
+                    - id
 
-      responses:
-        "201":
-          description: group succesfully created
-        
-    get:
-      tags: [groups]
-      summary: get group list
-      responses:
-        "200":
-          description: group list
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  users:
+        Chat:
+            type: object
+            properties:
+                users:
+                    type: string
+                    description: name of the user or group
+                pic:
+                    type: string
+                    description: group or profile picture
+            required:
+                - users
+
+        Message:
+            type: object
+            properties:
+                conversationId:
+                    type: string
+                content:
+                    type: string
+                sender:
+                    type: string
+                timestamp:
+                    type: string
+                    format: date-time
+                reactions:
                     type: array
                     items:
-                      type: string
-                  admin:
+                        type: string
+                id:
                     type: string
-        "404":
-          description: no groups found
-        
+            required:
+                - conversationId
+                - content
+                - sender
+                - timestamp
+                - id
 
-  /users/me/conversations/{conversationId}/messages:
+        Reactions:
+            type: object
+            properties:
+                emoji:
+                    type: string
+            required:
+                - emoji
 
-    post: 
-      tags: [messages]
-      summary: send a new message
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                conversationId:
-                  type: string
+paths:
+    /session:
+        post:
+            tags: ['login']
+            summary: Logs in the user
+            description: |-
+                If the user does not exist, it will be created,
+                and an identifier is returned.
+                If the user exists, the user identifier is returned.
+            operationId: doLogin
+            requestBody:
+                description: User details
                 content:
-                  type: string
-        required: true
+                    application/json:
+                    schema:
+                        type: object
+                        properties:
+                            name:
+                                type: string
+                                example: Maria
+                                pattern: 'ˆ.*?$'
+                                minLength: 3
+                                maxLength: 16
+                required: true
+            responses:
+                '201':
+                    description: User log-in action successful
+                    content:
+                        application/json:
+                        schema:
+                            type: object
+                            properties:
+                                identifier:
+                                    # change here if you decide to use an integer
+                                    # or any other type of identifier
+                                    type: string
+                                    example: 'abcdef012345'
+                '400':
+                    description: 'invalid input'
 
-      responses:
-        "201":
-          description: message sent
-        "400":
-          description: user id not found
-
-    delete:
-      tags: [messages]
-      summary: delete a message sent by user
-      responses:
-        '204':
-          description: Deleted
-        '404':
-          description: id not found
-        '401':
-          description: Unauthorized
-
-  /users:
-    get:
-      tags: [users]
-      description: returns the list of all existing users
-      operationId: getUsersNames
-      responses:
-        "200":
-          description: list of all users
-          content:
-            application/json:
+    /users/{id}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
               schema:
-                type: array
-                items:
                   type: string
-                  description: name of the user
-        "404":
-          description: no users found
+        put:
+            tags: ['user']
+            summary: Set the current user's username
+            operationId: setMyUserName
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: string
+            responses:
+                '200':
+                    description: Username updated successfully
+                '400':
+                    description: Bad request - Username already in use
+                '401':
+                    description: Unauthorized - User is not authenticated
+                '409':
+                    description: Conflict - Username already in use
+                '500':
+                    description: Internal server error
+    /users/{id}/photo:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+        put:
+            tags: ['user']
+            summary: Set the current user's profile picture
+            operationId: setMyProfilePicture
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: string
+                            format: byte
+            responses:
+                '200':
+                    description: Profile picture updated successfully
+                '400':
+                    description: Bad request - Invalid image format
+                '401':
+                    description: Unauthorized - User is not authenticated
+                '500':
+                    description: Internal server error
+
+    /users/{id}/conversations:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+        post:
+            tags: [conversations]
+            summary: start a new conversation
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                members:
+                                    type: array
+                                    items:
+                                        type: string
+                                        description: name of the users to add to the conversation
+                '201':
+                    description: new chat initialized
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                description: conversation id
+                '401':
+                    description: user does not exist
+                '404':
+                    description: user not found
+
+        get:
+            tags: [conversations]
+            summary: Retrieve conversations list
+            operationId: getMyConversations
+            responses:
+                '200':
+                    description: list of conversations
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Chat'
+                '404':
+                    description: no conversations found
+
+    /users/{id}/conversations/{conversationId}:
+        get:
+            tags: [conversations]
+            summary: Open conversation
+            operationId: getConversation
+            parameters:
+                - name: conversationName
+                  in: query
+                  description: name of the conversation
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: group list
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    users:
+                                        type: array
+                                        items:
+                                            type: string
+                                    admin:
+                                        type: string
+                '404':
+                    description: no groups found
+                '400':
+                    description: bad request
+
+    /users/{id}/conversations/{conversationId}/messages:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: conversationId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+        post:
+            tags: [messages]
+            summary: send a new message
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                content:
+                                    type: string
+                required: true
+
+            responses:
+                '201':
+                    description: message sent
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                description: message id
+                '400':
+                    description: user id not found
+
+        delete:
+            tags: [messages]
+            summary: delete a message sent by user
+            responses:
+                '204':
+                    description: Deleted
+                '404':
+                    description: id not found
+                '401':
+                    description: Unauthorized
+
+    /users:
+        get:
+            tags: [users]
+            description: returns the list of all existing users
+            operationId: getUsersNames
+            responses:
+                '200':
+                    description: list of all users
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    type: string
+                                    description: name of the user
+                '404':
+                    description: no users found
+                '400':
+                    description: bad request
+
+    /users/{id}/conversations/{conversationId}/messages/{messageId}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: conversationId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+            - name: messageId
+              in: path
+              description: ID of the message
+              required: true
+              schema:
+                  type: string
+        delete:
+            tags: [messages]
+            summary: delete a message sent by user
+            responses:
+                '204':
+                    description: Deleted
+                '404':
+                    description: id not found
+                '401':
+                    description: Unauthorized
+
+    users/{id}/conversations/{convId}/messages/{msgId}/forward:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: convId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+            - name: msgId
+              in: path
+              description: ID of the message
+              required: true
+              schema:
+                  type: string
+        post:
+            tags: [messages]
+            summary: forward a message
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                content:
+                                    type: string
+                                    description: id of the conversation to forward to
+                required: true
+            responses:
+                '201':
+                    description: message forwarded
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                description: message id
+                '400':
+                    description: user id not found
+                '401':
+                    description: Unauthorized
+                '404':
+                    description: message not found
+    users/{id}/conversations/{convId}/messages/{msgId}/reaction:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: convId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+            - name: msgId
+              in: path
+              description: ID of the message
+              required: true
+              schema:
+                  type: string
+        post:
+            tags: [messages]
+            summary: react to a message
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                emoji:
+                                    type: string
+                                    description: emoji to react with
+                required: true
+            responses:
+                '201':
+                    description: reaction added
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                description: reaction id
+                '400':
+                    description: user id not found
+                '401':
+                    description: Unauthorized
+                '404':
+                    description: message not found
+
+    /users/{id}/conversations/{convId}/messages/{msgId}/reaction/{reactionId}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: convId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+            - name: msgId
+              in: path
+              description: ID of the message
+              required: true
+              schema:
+                  type: string
+            - name: reactionId
+              in: path
+              description: ID of the reaction
+              required: true
+              schema:
+                  type: string
+        delete:
+            tags: [messages]
+            summary: delete a reaction
+            responses:
+                '204':
+                    description: Deleted
+                '404':
+                    description: id not found
+                '401':
+                    description: Unauthorized
+
+    /users/{id}/conversations/{convId}/members:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: convId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+        post:
+            tags: [conversations]
+            summary: add a member to a conversation
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: name of the user to add
+                required: true
+            responses:
+                '201':
+                    description: member added
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                description: member id
+                '400':
+                    description: user id not found
+                '401':
+                    description: Unauthorized
+                '404':
+                    description: conversation not found
+        delete:
+            tags: [conversations]
+            summary: remove a member from a conversation
+            responses:
+                '204':
+                    description: Deleted
+                '404':
+                    description: id not found
+                '401':
+                    description: Unauthorized
+    /users/{id}/conversations/{convId}/name:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: convId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+        put:
+            tags: [conversations]
+            summary: change the name of a conversation
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: string
+                            description: new name of the conversation
+                required: true
+            responses:
+                '200':
+                    description: name changed
+                '400':
+                    description: user id not found
+                '401':
+                    description: Unauthorized
+                '404':
+                    description: conversation not found
+
+    /users/{id}/conversations/{convId}/photo:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: convId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
+        put:
+            tags: [conversations]
+            summary: change the photo of a conversation
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: string
+                            format: byte
+                required: true
+            responses:
+                '200':
+                    description: photo changed
+                '400':
+                    description: user id not found
+                '401':
+                    description: Unauthorized
+                '404':
+                    description: conversation not found
