@@ -7,6 +7,8 @@ Each value here should be assumed valid only per request only, with some excepti
 package reqcontext
 
 import (
+	"net/http"
+
 	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -18,4 +20,20 @@ type RequestContext struct {
 
 	// Logger is a custom field logger for the request
 	Logger logrus.FieldLogger
+}
+
+// NewRequestContext creates a new request context with the given logger and request
+func NewRequestContext(logger logrus.FieldLogger, r *http.Request) RequestContext {
+	reqUUID, err := uuid.NewV4()
+	if err != nil {
+		logger.WithError(err).Error("can't generate request UUID")
+	}
+
+	return RequestContext{
+		ReqUUID: reqUUID,
+		Logger: logger.WithFields(logrus.Fields{
+			"reqid":     reqUUID.String(),
+			"remote-ip": r.RemoteAddr,
+		}),
+	}
 }

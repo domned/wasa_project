@@ -148,11 +148,6 @@ func New(db *sql.DB) (AppDatabase, error) {
 		return nil, fmt.Errorf("error creating contacts table: %w",err)
 	}
 
-	_, err = db.Exec(usersTable)
-
-
-}
-
 	return &appdbimpl{
 		c: db,
 	}, nil
