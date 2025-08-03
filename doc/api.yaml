@@ -19,15 +19,16 @@ info:
         that allows users to create groups,
         start conversations, and send messages.
     version: '1'
-    security:
-        - bearerAuth: []
 
-    components:
-        securitySchemes:
-            bearerAuth:
-                type: http
-                scheme: bearer
-                bearerFormat: JWT
+security:
+    - bearerAuth: []
+
+components:
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
 
     schemas:
         User:
@@ -36,7 +37,7 @@ info:
                 name:
                     type: string
                     example: Maria
-                    pattern: 'ˆ.*?$'
+                    pattern: '^.*?$'
                     minLength: 3
                     maxLength: 16
                 id:
@@ -46,9 +47,9 @@ info:
                     type: string
                     format: byte
                     description: profile picture
-                required:
-                    - name
-                    - id
+            required:
+                - name
+                - id
 
         Chat:
             type: object
@@ -109,29 +110,29 @@ paths:
                 description: User details
                 content:
                     application/json:
-                    schema:
-                        type: object
-                        properties:
-                            name:
-                                type: string
-                                example: Maria
-                                pattern: 'ˆ.*?$'
-                                minLength: 3
-                                maxLength: 16
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    example: Maria
+                                    pattern: '^.*?$'
+                                    minLength: 3
+                                    maxLength: 16
                 required: true
             responses:
                 '201':
                     description: User log-in action successful
                     content:
                         application/json:
-                        schema:
-                            type: object
-                            properties:
-                                identifier:
-                                    # change here if you decide to use an integer
-                                    # or any other type of identifier
-                                    type: string
-                                    example: 'abcdef012345'
+                            schema:
+                                type: object
+                                properties:
+                                    identifier:
+                                        # change here if you decide to use an integer
+                                        # or any other type of identifier
+                                        type: string
+                                        example: 'abcdef012345'
                 '400':
                     description: 'invalid input'
 
@@ -215,6 +216,7 @@ paths:
                                     items:
                                         type: string
                                         description: name of the users to add to the conversation
+            responses:
                 '201':
                     description: new chat initialized
                     content:
@@ -244,6 +246,19 @@ paths:
                     description: no conversations found
 
     /users/{id}/conversations/{conversationId}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of the user
+              required: true
+              schema:
+                  type: string
+            - name: conversationId
+              in: path
+              description: ID of the conversation
+              required: true
+              schema:
+                  type: string
         get:
             tags: [conversations]
             summary: Open conversation
@@ -374,7 +389,7 @@ paths:
                 '401':
                     description: Unauthorized
 
-    users/{id}/conversations/{convId}/messages/{msgId}/forward:
+    /users/{id}/conversations/{convId}/messages/{msgId}/forward:
         parameters:
             - name: id
               in: path
@@ -421,7 +436,7 @@ paths:
                     description: Unauthorized
                 '404':
                     description: message not found
-    users/{id}/conversations/{convId}/messages/{msgId}/reaction:
+    /users/{id}/conversations/{convId}/messages/{msgId}/reaction:
         parameters:
             - name: id
               in: path
