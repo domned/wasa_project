@@ -4,7 +4,7 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-func (db *appdbimpl) addContact(user User, contact User) (User, error) {
+func (db *appdbimpl) AddContact(user User, contact User) (User, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return User{}, err
@@ -19,7 +19,7 @@ func (db *appdbimpl) addContact(user User, contact User) (User, error) {
 	return contact, nil
 }
 
-func (db *appdbimpl) listContacts(user User) ([]User, error) {
+func (db *appdbimpl) ListContacts(user User) ([]User, error) {
 	rows, err := db.c.Query(`
 		SELECT u.id, u.username, u.picture 
 		FROM users u 
@@ -42,7 +42,7 @@ func (db *appdbimpl) listContacts(user User) ([]User, error) {
 	return contacts, nil
 }
 
-func (db *appdbimpl) removeContact(user User, contact User) (User, error) {
+func (db *appdbimpl) RemoveContact(user User, contact User) (User, error) {
 	_, err := db.c.Exec("DELETE FROM contacts WHERE user_id = ? AND contact_id = ?", 
 		user.UId, contact.UId)
 	if err != nil {

@@ -129,8 +129,9 @@ paths:
                                 type: object
                                 properties:
                                     identifier:
-                                        # change here if you decide to use an integer
-                                        # or any other type of identifier
+                                        # change here if you decide to use an
+                                        # integer or any other type of
+                                        # identifier
                                         type: string
                                         example: 'abcdef012345'
                 '400':
@@ -215,7 +216,9 @@ paths:
                                     type: array
                                     items:
                                         type: string
-                                        description: name of the users to add to the conversation
+                                        description:
+                                            name of the users to add to the
+                                            conversation
             responses:
                 '201':
                     description: new chat initialized
@@ -639,3 +642,20 @@ paths:
                     description: Unauthorized
                 '404':
                     description: conversation not found
+    /conversations/all:
+        get:
+            tags: [conversations]
+            summary: Get all conversations
+            description: Returns all conversations in the database (for user picker or admin).
+            operationId: getAllConversations
+            responses:
+                '200':
+                    description: List of all conversations
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Chat'
+                '500':
+                    description: Server error

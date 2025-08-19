@@ -31,12 +31,14 @@ func (rt *_router) Handler() http.Handler {
 	r.POST("/users/:id/conversations", rt.wrap(rt.createConversation))
 	r.GET("/users/:id/conversations", rt.wrap(rt.getMyConversations))
 	r.GET("/users/:id/conversations/:convId", rt.wrap(rt.getConversation))
+	r.GET("/conversations/all", rt.wrap(rt.getAllConversations))
 	r.POST("/users/:id/conversations/:convId/members", rt.wrap(rt.addtoGroup))
 	r.DELETE("/users/:id/conversations/:convId/members", rt.wrap(rt.leaveGroup))
 	r.PUT("/users/:id/conversations/:convId/name", rt.wrap(rt.setGroupName))
 	r.PUT("/users/:id/conversations/:convId/photo", rt.wrap(rt.setGroupPhoto))
 
 	// Messages
+	r.GET("/users/:id/conversations/:convId/messages", rt.wrap(rt.getMessages))
 	r.POST("/users/:id/conversations/:convId/messages", rt.wrap(rt.sendMessage))
 	r.DELETE("/users/:id/conversations/:convId/messages/:msgId", rt.wrap(rt.deleteMessage))
 	r.POST("/users/:id/conversations/:convId/messages/:msgId/forward", rt.wrap(rt.forwardMessage))

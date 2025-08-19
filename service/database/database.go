@@ -43,37 +43,45 @@ type User struct {
 
 type Conversation struct {
 	CId string `json:"id"`
+	Name string `json:"name"`
+	Picture string `json:"picture"`
 	Participants []User `json:"participants"`
 }
 // AppDatabase is the high level interface for the DB
 type AppDatabase interface {
 	Ping() error
-	doLogin (User) ()
-	listUsers (Username string) ([]User, error)
-	setMyUserName (Username string) (User, error)
-	setMyPhoto (Picture string) (User, error)
-	createConversation ([]User) (Conversation, error)
-	getMyConversations (User) ([]Conversation, error)
-	getConversation (CId string) (Conversation, error)
-	addtoGroup (CId string, User User) (Conversation, error)
-	leaveGroup (CId string, User User) (Conversation, error)
-	setGroupName (CId string, Name string) (Conversation, error)
-	setGroupPhoto (CId string, Picture string) (Conversation, error)
-	sendMessage (CId string, User User, Message string) (Conversation, error)
-	deleteMessage (CId string, User User, MId string) (Conversation, error)
-	forwardMessage (CId string, User User, MId string) (Conversation, error)
-	reactToMessage (CId string, User User, MId string, Emoji string) (Conversation, error)
-	removeReaction (CId string, User User, MId string, Emoji string) (Conversation, error)
-	commentMessage (CId string, User User, MId string, Comment string) (Conversation, error)
-	uncommentMessage (CId string, User User, MId string, CommentId string) (Conversation, error)
-	getContextReply () (string, error)
-	addContact (User User, Contact User) (User, error)
-	listContacts (User User) ([]User, error)
-	removeContact (User User, Contact User) (User, error)
+	DoLogin(user User)
+	ListUsers(username string) ([]User, error)
+	SetMyUserName(username string) (User, error)
+	SetMyPhoto(picture string) (User, error)
+	CreateConversation(participants []User) (Conversation, error)
+	GetMyConversations(user User) ([]Conversation, error)
+	GetConversation(cid string) (Conversation, error)
+	AddToGroup(cid string, user User) (Conversation, error)
+	LeaveGroup(cid string, user User) (Conversation, error)
+	SetGroupName(cid string, name string) (Conversation, error)
+	SetGroupPhoto(cid string, picture string) (Conversation, error)
+	SendMessage(cid string, user User, message string) (Conversation, error)
+	DeleteMessage(cid string, user User, mid string) (Conversation, error)
+	ForwardMessage(cid string, user User, mid string) (Conversation, error)
+	ReactToMessage(cid string, user User, mid string, emoji string) (Conversation, error)
+	RemoveReaction(cid string, user User, mid string, emoji string) (Conversation, error)
+	CommentMessage(cid string, user User, mid string, comment string) (Conversation, error)
+	UncommentMessage(cid string, user User, mid string, commentId string) (Conversation, error)
+	GetContextReply() (string, error)
+	AddContact(user User, contact User) (User, error)
+	ListContacts(user User) ([]User, error)
+	RemoveContact(user User, contact User) (User, error)
+	GetAllConversations() ([]Conversation, error)
+	GetRawDB() *sql.DB
 }
 
 type appdbimpl struct {
 	c *sql.DB
+}
+
+func (db *appdbimpl) GetRawDB() *sql.DB {
+	return db.c
 }
 
 // New returns a new instance of AppDatabase based on the SQLite connection `db`.
@@ -98,7 +106,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 	}
 	conversationsTable := `CREATE TABLE IF NOT EXISTS conversations (
 		id TEXT PRIMARY KEY,
-		participants TEXT NOT NULL
+		participants TEXT NOT NULL,
+		name TEXT,
 		picture TEXT
 	);`
 	if _, err := db.Exec(conversationsTable); err != nil {

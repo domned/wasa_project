@@ -1,5 +1,5 @@
 package database
 
-func (db *appdbimpl) getContextReply() (string, error) {
+func (db *appdbimpl) GetContextReply() (string, error) {
 	return "Hello World!", nil
 } 

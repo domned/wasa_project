@@ -4,11 +4,11 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-func (db *appdbimpl) doLogin(user User) {
+func (db *appdbimpl) DoLogin(user User) {
 	// TODO: Implement login logic
 }
 
-func (db *appdbimpl) listUsers(username string) ([]User, error) {
+func (db *appdbimpl) ListUsers(username string) ([]User, error) {
 	rows, err := db.c.Query("SELECT id, username, picture FROM users WHERE username LIKE ?", 
 		"%" + username + "%")
 	if err != nil {
@@ -28,7 +28,7 @@ func (db *appdbimpl) listUsers(username string) ([]User, error) {
 	return users, nil
 }
 
-func (db *appdbimpl) setMyUserName(username string) (User, error) {
+func (db *appdbimpl) SetMyUserName(username string) (User, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return User{}, err
@@ -43,7 +43,7 @@ func (db *appdbimpl) setMyUserName(username string) (User, error) {
 	return User{UId: id.String(), Username: username}, nil
 }
 
-func (db *appdbimpl) setMyPhoto(picture string) (User, error) {
+func (db *appdbimpl) SetMyPhoto(picture string) (User, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return User{}, err
