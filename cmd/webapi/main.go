@@ -33,6 +33,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/api"
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database"
@@ -83,11 +84,18 @@ func run() error {
 
 	// Start Database
 	logger.Println("initializing database support")
-	dbconn, err := sql.Open("sqlite3", cfg.DB.Filename)
+	// Add SQLite connection parameters for better concurrency
+	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=30000&_synchronous=NORMAL&_cache_size=1000&_foreign_keys=on", cfg.DB.Filename)
+	dbconn, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		logger.WithError(err).Error("error opening SQLite DB")
 		return fmt.Errorf("opening SQLite: %w", err)
 	}
+	
+	// Set connection pool settings for better concurrency
+	dbconn.SetMaxOpenConns(10)  // Allow up to 10 concurrent connections
+	dbconn.SetMaxIdleConns(5)   // Keep 5 idle connections
+	dbconn.SetConnMaxLifetime(time.Hour) // Connections expire after 1 hour
 	defer func() {
 		logger.Debug("database stopping")
 		_ = dbconn.Close()

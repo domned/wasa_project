@@ -1,6 +1,8 @@
 package database
 
 import (
+	"database/sql"
+
 	"github.com/gofrs/uuid"
 )
 
@@ -33,9 +35,16 @@ func (db *appdbimpl) ListContacts(user User) ([]User, error) {
 	var contacts []User
 	for rows.Next() {
 		var contact User
-		err := rows.Scan(&contact.UId, &contact.Username, &contact.Picture)
+		var picture sql.NullString
+		err := rows.Scan(&contact.UId, &contact.Username, &picture)
 		if err != nil {
 			return nil, err
+		}
+		// Handle NULL picture values
+		if picture.Valid {
+			contact.Picture = picture.String
+		} else {
+			contact.Picture = ""
 		}
 		contacts = append(contacts, contact)
 	}

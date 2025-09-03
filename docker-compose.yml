@@ -1,0 +1,55 @@
+services:
+    backend:
+        build:
+            context: .
+            dockerfile: Dockerfile.backend
+        container_name: wasa-backend
+        ports:
+            - '3000:3000'
+        volumes:
+            - ./service/database:/service/database
+        environment:
+            - CFG_DB_FILENAME=/service/database/app.db
+            - PORT=3000
+        restart: unless-stopped
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'wget',
+                    '--quiet',
+                    '--tries=1',
+                    '--spider',
+                    'http://localhost:3000/liveness',
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+    frontend:
+        build:
+            context: .
+            dockerfile: Dockerfile.frontend
+        container_name: wasa-frontend
+        ports:
+            - '80:80'
+        depends_on:
+            - backend
+        restart: unless-stopped
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'wget',
+                    '--quiet',
+                    '--tries=1',
+                    '--spider',
+                    'http://localhost:80',
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+volumes:
+    data:
+        driver: local

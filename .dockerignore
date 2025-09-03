@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+LICENSE
+doc/
+
+# Development files
+.vscode/
+*.log
+*.tmp
+
+# Node modules and build artifacts
+webui/node_modules/
+webui/dist/
+
+# Go build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Database files
+*.db
+data/
+
+# Shell scripts
+*.sh
+
+# Other artifacts
+vendor/

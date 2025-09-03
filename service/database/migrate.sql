@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS reactions (
     message_id TEXT NOT NULL,
     sender_id TEXT NOT NULL,
     emoji TEXT NOT NULL,
-    FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE
+    FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    UNIQUE(message_id, sender_id, emoji)
 );
 
 CREATE TABLE IF NOT EXISTS comments (
@@ -43,5 +44,15 @@ CREATE TABLE IF NOT EXISTS comments (
     sender_id TEXT NOT NULL,
     comment TEXT NOT NULL,
     FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS read_status (
+    id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    read_at INTEGER NOT NULL,
+    FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(message_id, user_id)
 );
 

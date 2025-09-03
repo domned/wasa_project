@@ -1,24 +1,21 @@
-# list of chats for user(sorted in rev cron), each element
-# of list contains username or group name, prof pic, eta of
-# last mess preview of last txt or icon for im
-# user can start convo with any other, auto add to list
-# can search via username and see all usernames
-# can create group and add others, not admin cannot search
-# or add themselves to group, can leave group
-# convo returns all messages in rev cron with timestamp, content, sender
-# username or checkmark(sender/receiver), reaction and user who posted
-# WASAText
-# Addendum
-# OpenAPI for simplified login
 ---
 openapi: 3.0.3
 info:
-    title: 'Wasatext'
+    title: 'WASAText API'
     description: |-
-        A simple chat application
-        that allows users to create groups,
-        start conversations, and send messages.
-    version: '1'
+        A modern chat application API that allows users to create groups,
+        start conversations, send messages, react to messages, and manage
+        contacts.
+
+        Features include:
+        - Real-time messaging with WebSocket support
+        - Image messaging with automatic compression
+        - Message reactions with toggle behavior (prevents duplicates)
+        - Group chat management
+        - Contact management
+        - Message forwarding (including images)
+        - User profiles with photos
+    version: '1.2.0'
 
 security:
     - bearerAuth: []
@@ -34,619 +31,1129 @@ components:
         User:
             type: object
             properties:
-                name:
+                id:
                     type: string
-                    example: Maria
+                    example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
+                    description: UUID of the user
+                username:
+                    type: string
+                    example: 'Alice'
                     pattern: '^.*?$'
                     minLength: 3
                     maxLength: 16
-                id:
+                picture:
                     type: string
-                    example: 'abcdef012345'
-                propic:
-                    type: string
-                    format: byte
-                    description: profile picture
+                    example: 'https://example.com/avatar.jpg'
+                    description: URL to user's profile picture
             required:
-                - name
                 - id
+                - username
 
-        Chat:
+        Conversation:
             type: object
             properties:
-                users:
+                id:
                     type: string
-                    description: name of the user or group
-                pic:
+                    example: 'c0c0c0c0-0000-0000-0000-000000000001'
+                    description: UUID of the conversation
+                name:
                     type: string
-                    description: group or profile picture
+                    example: 'Group Chat'
+                    description: Name of the conversation (empty for 1:1 chats)
+                picture:
+                    type: string
+                    example: 'https://example.com/group-avatar.jpg'
+                    description: URL to conversation's picture
+                participants:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/User'
+                    description: List of users in the conversation
             required:
-                - users
+                - id
+                - participants
 
         Message:
             type: object
             properties:
-                conversationId:
-                    type: string
-                content:
-                    type: string
-                sender:
-                    type: string
-                timestamp:
-                    type: string
-                    format: date-time
-                reactions:
-                    type: array
-                    items:
-                        type: string
                 id:
                     type: string
+                    example: '85f9cc23-48d7-448d-9172-7d5fd9cd4858'
+                    description: UUID of the message
+                senderId:
+                    type: string
+                    example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
+                    description: UUID of the message sender
+                text:
+                    type: string
+                    example: 'Hello, how are you?'
+                    description: Content of the message
+                imageUrl:
+                    type: string
+                    example: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...'
+                    description: Base64 encoded image data with MIME type prefix (optional)
+                senderUsername:
+                    type: string
+                    example: 'Alice'
+                    description: Username of the message sender
+                time:
+                    type: string
+                    example: '2025-01-01T12:00:00Z'
+                    description: Timestamp when the message was sent
+                reactions:
+                    type: object
+                    additionalProperties:
+                        type: object
+                        properties:
+                            count:
+                                type: integer
+                                example: 3
+                            users:
+                                type: array
+                                items:
+                                    type: string
+                                example: ['Alice', 'Bob']
+                    description: >-
+                        Reactions to the message (emoji -> reaction data)
             required:
-                - conversationId
-                - content
-                - sender
-                - timestamp
                 - id
+                - senderId
+                - senderUsername
 
-        Reactions:
+        Reaction:
             type: object
             properties:
                 emoji:
                     type: string
+                    example: '👍'
+                    description: The emoji reaction to toggle (add if not present, remove if already exists)
             required:
                 - emoji
+
+        Comment:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: 'comment-uuid'
+                    description: UUID of the comment
+                messageId:
+                    type: string
+                    example: 'message-uuid'
+                    description: UUID of the parent message
+                senderId:
+                    type: string
+                    example: 'user-uuid'
+                    description: UUID of the comment sender
+                content:
+                    type: string
+                    example: 'Great point!'
+                    description: Content of the comment
+            required:
+                - id
+                - messageId
+                - senderId
+                - content
+
+        Contact:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: 'contact-uuid'
+                    description: UUID of the contact
+                userId:
+                    type: string
+                    example: 'user-uuid'
+                    description: UUID of the user who owns this contact
+                contactUserId:
+                    type: string
+                    example: 'contact-user-uuid'
+                    description: UUID of the user being contacted
+                username:
+                    type: string
+                    example: 'Bob'
+                    description: Username of the contact
+            required:
+                - id
+                - userId
+                - contactUserId
+                - username
+
+        LoginRequest:
+            type: object
+            properties:
+                name:
+                    type: string
+                    example: 'Alice'
+                    pattern: '^.*?$'
+                    minLength: 3
+                    maxLength: 16
+            required:
+                - name
+
+        LoginResponse:
+            type: object
+            properties:
+                identifier:
+                    type: string
+                    example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
+                    description: UUID of the logged in user
+            required:
+                - identifier
+
+        SendMessageRequest:
+            type: object
+            properties:
+                content:
+                    type: string
+                    example: 'Hello everyone!'
+                    description: Content of the message to send
+                imageUrl:
+                    type: string
+                    example: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...'
+                    description: Base64 encoded image data with MIME type prefix (optional)
+            anyOf:
+                - required: [content]
+                - required: [imageUrl]
+
+        CreateConversationRequest:
+            type: object
+            properties:
+                participants:
+                    type: array
+                    items:
+                        type: string
+                    example: ['user-uuid-1', 'user-uuid-2']
+                    description: >-
+                        List of user UUIDs to include in the conversation
+                name:
+                    type: string
+                    example: 'Project Discussion'
+                    description: >-
+                        Name for the conversation (optional for 1:1 chats)
+            required:
+                - participants
+
+        ForwardMessageRequest:
+            type: object
+            properties:
+                content:
+                    type: string
+                    example: 'target-conversation-uuid'
+                    description: UUID of the target conversation
+            required:
+                - content
+
+        AddContactRequest:
+            type: object
+            properties:
+                contactUserId:
+                    type: string
+                    example: 'user-uuid'
+                    description: UUID of the user to add as contact
+            required:
+                - contactUserId
+
+        CommentRequest:
+            type: object
+            properties:
+                content:
+                    type: string
+                    example: 'Great message!'
+                    description: Content of the comment
+            required:
+                - content
+
+        Error:
+            type: object
+            properties:
+                message:
+                    type: string
+                    example: 'Invalid input provided'
+                    description: Error message describing what went wrong
+            required:
+                - message
 
 paths:
     /session:
         post:
-            tags: ['login']
-            summary: Logs in the user
+            tags: ['Authentication']
+            summary: User login
             description: |-
-                If the user does not exist, it will be created,
-                and an identifier is returned.
+                If the user does not exist, it will be created and an
+                identifier is returned.
                 If the user exists, the user identifier is returned.
             operationId: doLogin
             requestBody:
-                description: User details
+                description: User login details
                 content:
                     application/json:
                         schema:
-                            type: object
-                            properties:
-                                name:
-                                    type: string
-                                    example: Maria
-                                    pattern: '^.*?$'
-                                    minLength: 3
-                                    maxLength: 16
+                            $ref: '#/components/schemas/LoginRequest'
                 required: true
             responses:
                 '201':
-                    description: User log-in action successful
+                    description: User login successful
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    identifier:
-                                        # change here if you decide to use an
-                                        # integer or any other type of
-                                        # identifier
-                                        type: string
-                                        example: 'abcdef012345'
+                                $ref: '#/components/schemas/LoginResponse'
                 '400':
-                    description: 'invalid input'
+                    description: Invalid input - name must be 3-16 characters
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users:
+        get:
+            tags: ['Users']
+            summary: List all users
+            description: Returns a list of all users in the system
+            operationId: listUsers
+            responses:
+                '200':
+                    description: List of users
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/User'
+                '500':
+                    description: Internal server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
 
     /users/{id}:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
+                  format: uuid
         put:
-            tags: ['user']
-            summary: Set the current user's username
+            tags: ['Users']
+            summary: Update username
+            description: Set or update the user's username
             operationId: setMyUserName
             requestBody:
+                description: New username as a JSON string
                 content:
                     application/json:
                         schema:
                             type: string
+                            minLength: 3
+                            maxLength: 16
+                            example: 'Alice'
+                required: true
             responses:
                 '200':
                     description: Username updated successfully
                 '400':
-                    description: Bad request - Username already in use
-                '401':
-                    description: Unauthorized - User is not authenticated
-                '409':
-                    description: Conflict - Username already in use
-                '500':
-                    description: Internal server error
+                    description: Invalid username format
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
     /users/{id}/photo:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
+                  format: uuid
         put:
-            tags: ['user']
-            summary: Set the current user's profile picture
-            operationId: setMyProfilePicture
+            tags: ['Users']
+            summary: Update user photo
+            description: Set or update the user's profile picture
+            operationId: setMyPhoto
             requestBody:
+                description: New photo URL as a JSON string
                 content:
                     application/json:
                         schema:
                             type: string
-                            format: byte
+                            example: 'https://example.com/new-avatar.jpg'
+                required: true
             responses:
                 '200':
-                    description: Profile picture updated successfully
+                    description: Photo updated successfully
                 '400':
-                    description: Bad request - Invalid image format
-                '401':
-                    description: Unauthorized - User is not authenticated
-                '500':
-                    description: Internal server error
+                    description: Invalid photo URL
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/context:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        get:
+            tags: ['Users']
+            summary: Get user context
+            description: Get context information for the user
+            operationId: getContextReply
+            responses:
+                '200':
+                    description: User context retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                '404':
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
 
     /users/{id}/conversations:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
-        post:
-            tags: [conversations]
-            summary: start a new conversation
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                name:
-                                    type: string
-                                members:
-                                    type: array
-                                    items:
-                                        type: string
-                                        description:
-                                            name of the users to add to the
-                                            conversation
-            responses:
-                '201':
-                    description: new chat initialized
-                    content:
-                        application/json:
-                            schema:
-                                type: string
-                                description: conversation id
-                '401':
-                    description: user does not exist
-                '404':
-                    description: user not found
-
+                  format: uuid
         get:
-            tags: [conversations]
-            summary: Retrieve conversations list
+            tags: ['Conversations']
+            summary: Get user conversations
+            description: Returns all conversations for the specified user
             operationId: getMyConversations
             responses:
                 '200':
-                    description: list of conversations
+                    description: List of user conversations
                     content:
                         application/json:
                             schema:
                                 type: array
                                 items:
-                                    $ref: '#/components/schemas/Chat'
+                                    $ref: '#/components/schemas/Conversation'
                 '404':
-                    description: no conversations found
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        post:
+            tags: ['Conversations']
+            summary: Create conversation
+            description: >-
+                Create a new conversation with specified participants
+            operationId: createConversation
+            requestBody:
+                description: Conversation creation details
+                content:
+                    application/json:
+                        schema:
+                            $ref: >-
+                                '#/components/schemas/CreateConversationRequest'
+                required: true
+            responses:
+                '201':
+                    description: Conversation created successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Conversation'
+                '400':
+                    description: Invalid request data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
 
     /users/{id}/conversations/{conversationId}:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
+                  format: uuid
             - name: conversationId
               in: path
-              description: ID of the conversation
+              description: UUID of the conversation
               required: true
               schema:
                   type: string
+                  format: uuid
         get:
-            tags: [conversations]
-            summary: Open conversation
+            tags: ['Conversations']
+            summary: Get conversation details
+            description: Get details of a specific conversation
             operationId: getConversation
-            parameters:
-                - name: conversationName
-                  in: query
-                  description: name of the conversation
-                  required: true
-                  schema:
-                      type: string
             responses:
                 '200':
-                    description: group list
+                    description: Conversation details
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    users:
-                                        type: array
-                                        items:
-                                            type: string
-                                    admin:
-                                        type: string
+                                $ref: '#/components/schemas/Conversation'
                 '404':
-                    description: no groups found
+                    description: Conversation not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/conversations/{conversationId}/members:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        post:
+            tags: ['Conversations']
+            summary: Add member to group
+            description: Add a new member to an existing group conversation
+            operationId: addtoGroup
+            requestBody:
+                description: User ID to add to the group
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                userId:
+                                    type: string
+                                    format: uuid
+                            required:
+                                - userId
+                required: true
+            responses:
+                '200':
+                    description: Member added successfully
                 '400':
-                    description: bad request
+                    description: Invalid request data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Conversation or user not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        delete:
+            tags: ['Conversations']
+            summary: Leave group
+            description: Remove the user from the group conversation
+            operationId: leaveGroup
+            responses:
+                '200':
+                    description: Successfully left the group
+                '404':
+                    description: Conversation not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/conversations/{conversationId}/name:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        put:
+            tags: ['Conversations']
+            summary: Set group name
+            description: Set or update the name of a group conversation
+            operationId: setGroupName
+            requestBody:
+                description: New group name
+                content:
+                    application/json:
+                        schema:
+                            type: string
+                            example: 'Project Team'
+                required: true
+            responses:
+                '200':
+                    description: Group name updated successfully
+                '400':
+                    description: Invalid group name
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Conversation not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/conversations/{conversationId}/photo:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        put:
+            tags: ['Conversations']
+            summary: Set group photo
+            description: Set or update the photo of a group conversation
+            operationId: setGroupPhoto
+            requestBody:
+                description: New group photo URL
+                content:
+                    application/json:
+                        schema:
+                            type: string
+                            example: 'https://example.com/group-photo.jpg'
+                required: true
+            responses:
+                '200':
+                    description: Group photo updated successfully
+                '400':
+                    description: Invalid photo URL
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Conversation not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
 
     /users/{id}/conversations/{conversationId}/messages:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
+                  format: uuid
             - name: conversationId
               in: path
-              description: ID of the conversation
+              description: UUID of the conversation
               required: true
               schema:
                   type: string
-        post:
-            tags: [messages]
-            summary: send a new message
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                content:
-                                    type: string
-                required: true
-
-            responses:
-                '201':
-                    description: message sent
-                    content:
-                        application/json:
-                            schema:
-                                type: string
-                                description: message id
-                '400':
-                    description: user id not found
-
-        delete:
-            tags: [messages]
-            summary: delete a message sent by user
-            responses:
-                '204':
-                    description: Deleted
-                '404':
-                    description: id not found
-                '401':
-                    description: Unauthorized
-
-    /users:
+                  format: uuid
         get:
-            tags: [users]
-            description: returns the list of all existing users
-            operationId: getUsersNames
+            tags: ['Messages']
+            summary: Get messages
+            description: Get all messages from a conversation
+            operationId: getMessages
             responses:
                 '200':
-                    description: list of all users
+                    description: List of messages
                     content:
                         application/json:
                             schema:
                                 type: array
                                 items:
-                                    type: string
-                                    description: name of the user
+                                    $ref: '#/components/schemas/Message'
                 '404':
-                    description: no users found
+                    description: Conversation not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        post:
+            tags: ['Messages']
+            summary: Send message
+            description: Send a new text message or image to the conversation. Images should be provided as base64-encoded data URLs.
+            operationId: sendMessage
+            requestBody:
+                description: Message content (text and/or image)
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SendMessageRequest'
+                required: true
+            responses:
+                '201':
+                    description: Message sent successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                description: UUID of the created message
                 '400':
-                    description: bad request
+                    description: Invalid message content
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Conversation not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
 
     /users/{id}/conversations/{conversationId}/messages/{messageId}:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
+                  format: uuid
             - name: conversationId
               in: path
-              description: ID of the conversation
+              description: UUID of the conversation
               required: true
               schema:
                   type: string
+                  format: uuid
             - name: messageId
               in: path
-              description: ID of the message
+              description: UUID of the message
               required: true
               schema:
                   type: string
+                  format: uuid
         delete:
-            tags: [messages]
-            summary: delete a message sent by user
+            tags: ['Messages']
+            summary: Delete message
+            description: Delete a message (only by the sender)
+            operationId: deleteMessage
             responses:
-                '204':
-                    description: Deleted
-                '404':
-                    description: id not found
-                '401':
-                    description: Unauthorized
-
-    /users/{id}/conversations/{convId}/messages/{msgId}/forward:
-        parameters:
-            - name: id
-              in: path
-              description: ID of the user
-              required: true
-              schema:
-                  type: string
-            - name: convId
-              in: path
-              description: ID of the conversation
-              required: true
-              schema:
-                  type: string
-            - name: msgId
-              in: path
-              description: ID of the message
-              required: true
-              schema:
-                  type: string
-        post:
-            tags: [messages]
-            summary: forward a message
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                content:
-                                    type: string
-                                    description: id of the conversation to forward to
-                required: true
-            responses:
-                '201':
-                    description: message forwarded
+                '200':
+                    description: Message deleted successfully
+                '403':
+                    description: Not authorized to delete this message
                     content:
                         application/json:
                             schema:
-                                type: string
-                                description: message id
-                '400':
-                    description: user id not found
-                '401':
-                    description: Unauthorized
+                                $ref: '#/components/schemas/Error'
                 '404':
-                    description: message not found
-    /users/{id}/conversations/{convId}/messages/{msgId}/reaction:
-        parameters:
-            - name: id
-              in: path
-              description: ID of the user
-              required: true
-              schema:
-                  type: string
-            - name: convId
-              in: path
-              description: ID of the conversation
-              required: true
-              schema:
-                  type: string
-            - name: msgId
-              in: path
-              description: ID of the message
-              required: true
-              schema:
-                  type: string
-        post:
-            tags: [messages]
-            summary: react to a message
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                emoji:
-                                    type: string
-                                    description: emoji to react with
-                required: true
-            responses:
-                '201':
-                    description: reaction added
+                    description: Message not found
                     content:
                         application/json:
                             schema:
-                                type: string
-                                description: reaction id
-                '400':
-                    description: user id not found
-                '401':
-                    description: Unauthorized
-                '404':
-                    description: message not found
+                                $ref: '#/components/schemas/Error'
 
-    /users/{id}/conversations/{convId}/messages/{msgId}/reaction/{reactionId}:
+    /users/{id}/conversations/{conversationId}/messages/{messageId}/forward:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
-            - name: convId
+                  format: uuid
+            - name: conversationId
               in: path
-              description: ID of the conversation
+              description: UUID of the conversation
               required: true
               schema:
                   type: string
-            - name: msgId
+                  format: uuid
+            - name: messageId
               in: path
-              description: ID of the message
+              description: UUID of the message
               required: true
               schema:
                   type: string
-            - name: reactionId
-              in: path
-              description: ID of the reaction
-              required: true
-              schema:
-                  type: string
-        delete:
-            tags: [messages]
-            summary: delete a reaction
-            responses:
-                '204':
-                    description: Deleted
-                '404':
-                    description: id not found
-                '401':
-                    description: Unauthorized
-
-    /users/{id}/conversations/{convId}/members:
-        parameters:
-            - name: id
-              in: path
-              description: ID of the user
-              required: true
-              schema:
-                  type: string
-            - name: convId
-              in: path
-              description: ID of the conversation
-              required: true
-              schema:
-                  type: string
+                  format: uuid
         post:
-            tags: [conversations]
-            summary: add a member to a conversation
+            tags: ['Messages']
+            summary: Forward message
+            description: Forward a message (including images) to another conversation with a [Forwarded] prefix
+            operationId: forwardMessage
             requestBody:
+                description: Target conversation for forwarding
                 content:
                     application/json:
                         schema:
-                            type: object
-                            properties:
-                                name:
-                                    type: string
-                                    description: name of the user to add
-                required: true
-            responses:
-                '201':
-                    description: member added
-                    content:
-                        application/json:
-                            schema:
-                                type: string
-                                description: member id
-                '400':
-                    description: user id not found
-                '401':
-                    description: Unauthorized
-                '404':
-                    description: conversation not found
-        delete:
-            tags: [conversations]
-            summary: remove a member from a conversation
-            responses:
-                '204':
-                    description: Deleted
-                '404':
-                    description: id not found
-                '401':
-                    description: Unauthorized
-    /users/{id}/conversations/{convId}/name:
-        parameters:
-            - name: id
-              in: path
-              description: ID of the user
-              required: true
-              schema:
-                  type: string
-            - name: convId
-              in: path
-              description: ID of the conversation
-              required: true
-              schema:
-                  type: string
-        put:
-            tags: [conversations]
-            summary: change the name of a conversation
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: string
-                            description: new name of the conversation
+                            $ref: '#/components/schemas/ForwardMessageRequest'
                 required: true
             responses:
                 '200':
-                    description: name changed
+                    description: Message forwarded successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Conversation'
                 '400':
-                    description: user id not found
-                '401':
-                    description: Unauthorized
+                    description: Invalid request data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
                 '404':
-                    description: conversation not found
+                    description: Message or target conversation not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
 
-    /users/{id}/conversations/{convId}/photo:
+    /users/{id}/conversations/{conversationId}/messages/{messageId}/reaction:
         parameters:
             - name: id
               in: path
-              description: ID of the user
+              description: UUID of the user
               required: true
               schema:
                   type: string
-            - name: convId
+                  format: uuid
+            - name: conversationId
               in: path
-              description: ID of the conversation
+              description: UUID of the conversation
               required: true
               schema:
                   type: string
-        put:
-            tags: [conversations]
-            summary: change the photo of a conversation
+                  format: uuid
+            - name: messageId
+              in: path
+              description: UUID of the message
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        post:
+            tags: ['Reactions']
+            summary: Toggle reaction
+            description: Toggle a reaction on a message. If the user has already reacted with this emoji, the reaction will be removed. If not, it will be added.
+            operationId: reactToMessage
             requestBody:
+                description: Emoji to toggle
                 content:
                     application/json:
                         schema:
-                            type: string
-                            format: byte
+                            $ref: '#/components/schemas/Reaction'
                 required: true
             responses:
                 '200':
-                    description: photo changed
+                    description: Reaction toggled successfully
                 '400':
-                    description: user id not found
-                '401':
-                    description: Unauthorized
+                    description: Invalid reaction data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
                 '404':
-                    description: conversation not found
+                    description: Message not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/conversations/{conversationId}/messages/{messageId}/reaction/{emoji}:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: messageId
+              in: path
+              description: UUID of the message
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: emoji
+              in: path
+              description: The emoji reaction to remove
+              required: true
+              schema:
+                  type: string
+        delete:
+            tags: ['Reactions']
+            summary: Remove reaction
+            description: Remove a specific reaction from a message
+            operationId: removeReaction
+            responses:
+                '200':
+                    description: Reaction removed successfully
+                '404':
+                    description: Message or reaction not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/conversations/{conversationId}/messages/{messageId}/comments:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: messageId
+              in: path
+              description: UUID of the message
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        post:
+            tags: ['Comments']
+            summary: Add comment
+            description: Add a comment to a message
+            operationId: commentMessage
+            requestBody:
+                description: Comment content
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CommentRequest'
+                required: true
+            responses:
+                '201':
+                    description: Comment added successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Comment'
+                '400':
+                    description: Invalid comment data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Message not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/conversations/{conversationId}/messages/{messageId}/comments/{commentId}:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: messageId
+              in: path
+              description: UUID of the message
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: commentId
+              in: path
+              description: UUID of the comment
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        delete:
+            tags: ['Comments']
+            summary: Delete comment
+            description: Delete a comment (only by the commenter)
+            operationId: deleteComment
+            responses:
+                '200':
+                    description: Comment deleted successfully
+                '403':
+                    description: Not authorized to delete this comment
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Comment not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/contacts:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        get:
+            tags: ['Contacts']
+            summary: List contacts
+            description: Get all contacts for the user
+            operationId: listContacts
+            responses:
+                '200':
+                    description: List of contacts
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Contact'
+                '404':
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        post:
+            tags: ['Contacts']
+            summary: Add contact
+            description: Add a new contact for the user
+            operationId: addContact
+            requestBody:
+                description: Contact details
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AddContactRequest'
+                required: true
+            responses:
+                '201':
+                    description: Contact added successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Contact'
+                '400':
+                    description: Invalid contact data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /users/{id}/contacts/{contactId}:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+            - name: contactId
+              in: path
+              description: UUID of the contact
+              required: true
+              schema:
+                  type: string
+                  format: uuid
+        delete:
+            tags: ['Contacts']
+            summary: Remove contact
+            description: Remove a contact from the user's contact list
+            operationId: removeContact
+            responses:
+                '200':
+                    description: Contact removed successfully
+                '404':
+                    description: Contact not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
     /conversations/all:
         get:
-            tags: [conversations]
+            tags: ['Conversations']
             summary: Get all conversations
-            description: Returns all conversations in the database (for user picker or admin).
+            description: >-
+                Returns all conversations in the database (for admin or
+                user picker)
             operationId: getAllConversations
             responses:
                 '200':
@@ -656,6 +1163,43 @@ paths:
                             schema:
                                 type: array
                                 items:
-                                    $ref: '#/components/schemas/Chat'
+                                    $ref: >-
+                                        '#/components/schemas/Conversation'
                 '500':
-                    description: Server error
+                    description: Internal server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /ws:
+        get:
+            tags: ['WebSocket']
+            summary: WebSocket connection
+            description: >-
+                Establish a WebSocket connection for real-time communication
+            operationId: serveWs
+            responses:
+                '101':
+                    description: WebSocket connection established
+                '400':
+                    description: Bad request - cannot upgrade to WebSocket
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /liveness:
+        get:
+            tags: ['Health']
+            summary: Health check
+            description: Health check endpoint for monitoring server status
+            operationId: liveness
+            responses:
+                '200':
+                    description: Server is healthy
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                                example: 'OK'

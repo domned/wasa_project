@@ -30,26 +30,26 @@ func (rt *_router) Handler() http.Handler {
 	// Conversations
 	r.POST("/users/:id/conversations", rt.wrap(rt.createConversation))
 	r.GET("/users/:id/conversations", rt.wrap(rt.getMyConversations))
-	r.GET("/users/:id/conversations/:convId", rt.wrap(rt.getConversation))
+	r.GET("/users/:id/conversations/:conversationId", rt.wrap(rt.getConversation))
 	r.GET("/conversations/all", rt.wrap(rt.getAllConversations))
-	r.POST("/users/:id/conversations/:convId/members", rt.wrap(rt.addtoGroup))
-	r.DELETE("/users/:id/conversations/:convId/members", rt.wrap(rt.leaveGroup))
-	r.PUT("/users/:id/conversations/:convId/name", rt.wrap(rt.setGroupName))
-	r.PUT("/users/:id/conversations/:convId/photo", rt.wrap(rt.setGroupPhoto))
+	r.POST("/users/:id/conversations/:conversationId/members", rt.wrap(rt.addtoGroup))
+	r.DELETE("/users/:id/conversations/:conversationId/members", rt.wrap(rt.leaveGroup))
+	r.PUT("/users/:id/conversations/:conversationId/name", rt.wrap(rt.setGroupName))
+	r.PUT("/users/:id/conversations/:conversationId/photo", rt.wrap(rt.setGroupPhoto))
 
 	// Messages
-	r.GET("/users/:id/conversations/:convId/messages", rt.wrap(rt.getMessages))
-	r.POST("/users/:id/conversations/:convId/messages", rt.wrap(rt.sendMessage))
-	r.DELETE("/users/:id/conversations/:convId/messages/:msgId", rt.wrap(rt.deleteMessage))
-	r.POST("/users/:id/conversations/:convId/messages/:msgId/forward", rt.wrap(rt.forwardMessage))
+	r.GET("/users/:id/conversations/:conversationId/messages", rt.wrap(rt.getMessages))
+	r.POST("/users/:id/conversations/:conversationId/messages", rt.wrap(rt.sendMessage))
+	r.DELETE("/users/:id/conversations/:conversationId/messages/:messageId", rt.wrap(rt.deleteMessage))
+	r.POST("/users/:id/conversations/:conversationId/messages/:messageId/forward", rt.wrap(rt.forwardMessage))
 
 	// Reactions
-	r.POST("/users/:id/conversations/:convId/messages/:msgId/reaction", rt.wrap(rt.reactToMessage))
-	r.DELETE("/users/:id/conversations/:convId/messages/:msgId/reaction/:emoji", rt.wrap(rt.removeReaction))
+	r.POST("/users/:id/conversations/:conversationId/messages/:messageId/reaction", rt.wrap(rt.reactToMessage))
+	r.DELETE("/users/:id/conversations/:conversationId/messages/:messageId/reaction/:emoji", rt.wrap(rt.removeReaction))
 
 	// Comments
-	r.POST("/users/:id/conversations/:convId/messages/:msgId/comments", rt.wrap(rt.commentMessage))
-	r.DELETE("/users/:id/conversations/:convId/messages/:msgId/comments/:commentId", rt.wrap(rt.deleteComment))
+	r.POST("/users/:id/conversations/:conversationId/messages/:messageId/comments", rt.wrap(rt.commentMessage))
+	r.DELETE("/users/:id/conversations/:conversationId/messages/:messageId/comments/:commentId", rt.wrap(rt.deleteComment))
 
 	// Contacts
 	r.POST("/users/:id/contacts", rt.wrap(rt.addContact))
