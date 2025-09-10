@@ -474,8 +474,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: >-
-                                '#/components/schemas/CreateConversationRequest'
+                            $ref: '#/components/schemas/CreateConversationRequest'
                 required: true
             responses:
                 '201':
@@ -1163,8 +1162,7 @@ paths:
                             schema:
                                 type: array
                                 items:
-                                    $ref: >-
-                                        '#/components/schemas/Conversation'
+                                    $ref: '#/components/schemas/Conversation'
                 '500':
                     description: Internal server error
                     content:

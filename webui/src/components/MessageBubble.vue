@@ -9,24 +9,33 @@
 				>
 					{{ msg.senderUsername }}
 				</div>
-				
+
 				<!-- Display image if present -->
 				<div v-if="msg.imageUrl" class="message-image mb-2">
-					<img 
-						:src="msg.imageUrl" 
-						alt="Image" 
+					<img
+						:src="msg.imageUrl"
+						alt="Image"
 						class="img-fluid rounded"
-						style="max-width: 300px; max-height: 200px; cursor: pointer;"
+						style="
+							max-width: 300px;
+							max-height: 200px;
+							cursor: pointer;
+						"
 						@click="openImageModal"
 					/>
 				</div>
-				
+
 				<!-- Display text if present -->
 				<span v-if="msg.text">{{ msg.text }}</span>
 				<div class="message-footer">
 					<span class="time small text-muted">{{ msg.time }}</span>
 					<span v-if="isOwn" class="read-status ms-1">
-						<span v-if="msg.isRead" class="read-tick" title="Read by recipient">✓✓</span>
+						<span
+							v-if="msg.isRead"
+							class="read-tick"
+							title="Read by recipient"
+							>✓✓</span
+						>
 						<span v-else class="sent-tick" title="Sent">✓</span>
 					</span>
 				</div>
@@ -102,11 +111,19 @@
 			</div>
 		</div>
 	</div>
-	
+
 	<!-- Image Modal -->
-	<div v-if="showImageModal" class="image-modal-overlay" @click="closeImageModal">
+	<div
+		v-if="showImageModal"
+		class="image-modal-overlay"
+		@click="closeImageModal"
+	>
 		<div class="image-modal-content" @click.stop>
-			<img :src="msg.imageUrl" alt="Full size image" class="modal-image" />
+			<img
+				:src="msg.imageUrl"
+				alt="Full size image"
+				class="modal-image"
+			/>
 			<button class="close-modal-btn" @click="closeImageModal">✕</button>
 		</div>
 	</div>

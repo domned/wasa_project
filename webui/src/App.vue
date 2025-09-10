@@ -129,7 +129,7 @@ function startChatPolling() {
 			sidebarRef.value.refreshChats();
 		}
 	}, 15000); // 15 seconds
-	
+
 	// Poll every 5 seconds for active chat messages (good balance of responsiveness and load)
 	activePollingInterval = setInterval(() => {
 		if (isLoggedIn.value && selectedChatId.value) {
@@ -157,10 +157,10 @@ async function selectChat(chatId) {
 	selectedChatId.value = chatId;
 	// Find the chat object by id
 	selectedChat.value = chats.value.find((c) => c.id === chatId) || null;
-	
+
 	// Store previous message count to detect new messages
 	const previousMessageCount = selectedMessages.value.length;
-	
+
 	try {
 		const res = await axios.get(
 			`/users/${userId.value}/conversations/${chatId}/messages`
@@ -170,9 +170,12 @@ async function selectChat(chatId) {
 			...msg,
 			own: msg.senderId === userId.value,
 		}));
-		
+
 		// Check if new messages were received (not sent by current user)
-		if (newMessages.length > previousMessageCount && previousMessageCount > 0) {
+		if (
+			newMessages.length > previousMessageCount &&
+			previousMessageCount > 0
+		) {
 			const latestMessage = newMessages[newMessages.length - 1];
 			if (!latestMessage.own && sidebarRef.value) {
 				// New message received from someone else, update sidebar
@@ -180,11 +183,11 @@ async function selectChat(chatId) {
 					id: latestMessage.id,
 					senderId: latestMessage.senderId,
 					text: latestMessage.text,
-					senderUsername: latestMessage.senderUsername
+					senderUsername: latestMessage.senderUsername,
 				});
 			}
 		}
-		
+
 		selectedMessages.value = newMessages;
 	} catch (err) {
 		selectedMessages.value = [];
@@ -196,17 +199,20 @@ async function handleMessageSent(messageData) {
 	if (selectedChatId.value) {
 		await selectChat(selectedChatId.value);
 	}
-	
+
 	// Update the sidebar with the new message to reorder chats
 	if (sidebarRef.value && messageData) {
 		const newMessage = {
 			id: messageData.messageId || Date.now().toString(),
 			senderId: userId.value,
 			text: messageData.content || '',
-			senderUsername: username.value
+			senderUsername: username.value,
 		};
-		
-		sidebarRef.value.updateChatWithNewMessage(messageData.chatId, newMessage);
+
+		sidebarRef.value.updateChatWithNewMessage(
+			messageData.chatId,
+			newMessage
+		);
 	}
 }
 

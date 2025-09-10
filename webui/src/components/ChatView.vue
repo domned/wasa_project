@@ -54,11 +54,11 @@
 					Send
 				</button>
 			</div>
-			
+
 			<!-- Image preview -->
 			<div v-if="selectedImage" class="image-preview mt-2">
 				<img :src="selectedImage" alt="Preview" class="preview-image" />
-				<button 
+				<button
 					class="btn btn-sm btn-outline-danger ms-2"
 					@click="removeImage"
 					title="Remove image"
@@ -93,7 +93,7 @@ function fileToDataURL(file, maxWidth = 800, quality = 0.8) {
 		const canvas = document.createElement('canvas');
 		const ctx = canvas.getContext('2d');
 		const img = new Image();
-		
+
 		img.onload = () => {
 			// Calculate new dimensions while maintaining aspect ratio
 			let { width, height } = img;
@@ -101,16 +101,16 @@ function fileToDataURL(file, maxWidth = 800, quality = 0.8) {
 				height = (height * maxWidth) / width;
 				width = maxWidth;
 			}
-			
+
 			canvas.width = width;
 			canvas.height = height;
-			
+
 			// Draw and compress
 			ctx.drawImage(img, 0, 0, width, height);
 			const compressedDataURL = canvas.toDataURL('image/jpeg', quality);
 			resolve(compressedDataURL);
 		};
-		
+
 		const reader = new FileReader();
 		reader.onload = (e) => {
 			img.src = e.target.result;
@@ -137,20 +137,21 @@ function removeImage() {
 }
 
 async function send() {
-	if ((!input.value.trim() && !selectedImage.value) || !props.chat?.id) return;
+	if ((!input.value.trim() && !selectedImage.value) || !props.chat?.id)
+		return;
 
 	const messageContent = input.value.trim();
 	const userId = localStorage.getItem('userId');
 
 	try {
 		let response;
-		
+
 		// Send message (with or without image)
 		response = await axios.post(
 			`/users/${userId}/conversations/${props.chat.id}/messages`,
-			{ 
+			{
 				content: messageContent,
-				imageUrl: selectedImage.value || undefined
+				imageUrl: selectedImage.value || undefined,
 			}
 		);
 
