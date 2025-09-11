@@ -22,7 +22,7 @@ func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps
 		Participants []string `json:"participants"`
 		Name         string   `json:"name,omitempty"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
@@ -107,7 +107,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 	// Get user ID and conversation ID from URL
 	userId := ps.ByName("id")
 	conversationId := ps.ByName("conversationId")
-	
+
 	if userId == "" || conversationId == "" {
 		http.Error(w, "missing user id or conversation id", http.StatusBadRequest)
 		return
@@ -128,7 +128,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 			break
 		}
 	}
-	
+
 	if !isParticipant {
 		http.Error(w, "unauthorized", http.StatusForbidden)
 		return
@@ -145,7 +145,7 @@ func (rt *_router) addtoGroup(w http.ResponseWriter, r *http.Request, ps httprou
 	// Get user ID and conversation ID from URL
 	userId := ps.ByName("id")
 	conversationId := ps.ByName("conversationId")
-	
+
 	if userId == "" || conversationId == "" {
 		http.Error(w, "missing user id or conversation id", http.StatusBadRequest)
 		return
@@ -155,7 +155,7 @@ func (rt *_router) addtoGroup(w http.ResponseWriter, r *http.Request, ps httprou
 	var request struct {
 		Name string `json:"name"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
@@ -194,7 +194,7 @@ func (rt *_router) leaveGroup(w http.ResponseWriter, r *http.Request, ps httprou
 	// Get user ID and conversation ID from URL
 	userId := ps.ByName("id")
 	conversationId := ps.ByName("conversationId")
-	
+
 	if userId == "" || conversationId == "" {
 		http.Error(w, "missing user id or conversation id", http.StatusBadRequest)
 		return
@@ -223,7 +223,7 @@ func (rt *_router) setGroupName(w http.ResponseWriter, r *http.Request, ps httpr
 	// Get user ID and conversation ID from URL
 	userId := ps.ByName("id")
 	conversationId := ps.ByName("conversationId")
-	
+
 	if userId == "" || conversationId == "" {
 		http.Error(w, "missing user id or conversation id", http.StatusBadRequest)
 		return
@@ -255,7 +255,7 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	// Get user ID and conversation ID from URL
 	userId := ps.ByName("id")
 	conversationId := ps.ByName("conversationId")
-	
+
 	if userId == "" || conversationId == "" {
 		http.Error(w, "missing user id or conversation id", http.StatusBadRequest)
 		return
@@ -281,4 +281,4 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	w.WriteHeader(http.StatusOK)
-} 
+}

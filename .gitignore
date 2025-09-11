@@ -14,3 +14,14 @@ docker-compose.log
 
 .vscode/*
 !.vscode/extensions.json
+
+# Build artifacts
+webapi
+cmd/webapi/webapi
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+app.db
+wasa.db

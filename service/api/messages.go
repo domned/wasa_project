@@ -21,7 +21,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		Content  string `json:"content"`
 		ImageUrl string `json:"imageUrl,omitempty"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		ctx.Logger.WithError(err).Error("failed to decode request body")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -74,7 +74,11 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	// Return success response with message ID
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(messageId.String())
+	if err := json.NewEncoder(w).Encode(messageId.String()); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode message response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -91,7 +95,7 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 	// Check if message exists and belongs to the user
 	var senderId string
 	err := rt.db.GetRawDB().QueryRow(
-		"SELECT sender_id FROM messages WHERE id = ? AND conversation_id = ?", 
+		"SELECT sender_id FROM messages WHERE id = ? AND conversation_id = ?",
 		messageId, conversationId).Scan(&senderId)
 	if err != nil {
 		http.Error(w, "message not found", http.StatusNotFound)
@@ -130,7 +134,7 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	var requestBody struct {
 		Content string `json:"content"` // This should be the target conversation ID
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		ctx.Logger.WithError(err).Error("failed to decode request body")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -160,7 +164,11 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	// Return the updated conversation
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(conversation)
+	if err := json.NewEncoder(w).Encode(conversation); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode conversation response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (rt *_router) reactToMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -173,7 +181,7 @@ func (rt *_router) reactToMessage(w http.ResponseWriter, r *http.Request, ps htt
 	var requestBody struct {
 		Emoji string `json:"emoji"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		ctx.Logger.WithError(err).Error("failed to decode request body")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -248,7 +256,7 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 	var requestBody struct {
 		Comment string `json:"comment"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		ctx.Logger.WithError(err).Error("failed to decode request body")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -263,7 +271,7 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 	// Validate message exists
 	var messageExists int
 	err := rt.db.GetRawDB().QueryRow(
-		"SELECT COUNT(*) FROM messages WHERE id = ? AND conversation_id = ?", 
+		"SELECT COUNT(*) FROM messages WHERE id = ? AND conversation_id = ?",
 		messageId, conversationId).Scan(&messageExists)
 	if err != nil || messageExists == 0 {
 		http.Error(w, "message not found", http.StatusNotFound)
@@ -291,7 +299,11 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 	// Return comment ID
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(commentId.String())
+	if err := json.NewEncoder(w).Encode(commentId.String()); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode comment response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (rt *_router) deleteComment(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -309,7 +321,7 @@ func (rt *_router) deleteComment(w http.ResponseWriter, r *http.Request, ps http
 	// Check if comment exists and belongs to the user
 	var senderId string
 	err := rt.db.GetRawDB().QueryRow(
-		"SELECT sender_id FROM comments WHERE id = ? AND message_id = ?", 
+		"SELECT sender_id FROM comments WHERE id = ? AND message_id = ?",
 		commentId, messageId).Scan(&senderId)
 	if err != nil {
 		http.Error(w, "comment not found", http.StatusNotFound)
@@ -331,4 +343,4 @@ func (rt *_router) deleteComment(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-} 
+}

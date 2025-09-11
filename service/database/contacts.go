@@ -12,7 +12,7 @@ func (db *appdbimpl) AddContact(user User, contact User) (User, error) {
 		return User{}, err
 	}
 
-	_, err = db.c.Exec("INSERT INTO contacts (id, user_id, contact_id) VALUES (?, ?, ?)", 
+	_, err = db.c.Exec("INSERT INTO contacts (id, user_id, contact_id) VALUES (?, ?, ?)",
 		id.String(), user.UId, contact.UId)
 	if err != nil {
 		return User{}, err
@@ -48,14 +48,19 @@ func (db *appdbimpl) ListContacts(user User) ([]User, error) {
 		}
 		contacts = append(contacts, contact)
 	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return contacts, nil
 }
 
 func (db *appdbimpl) RemoveContact(user User, contact User) (User, error) {
-	_, err := db.c.Exec("DELETE FROM contacts WHERE user_id = ? AND contact_id = ?", 
+	_, err := db.c.Exec("DELETE FROM contacts WHERE user_id = ? AND contact_id = ?",
 		user.UId, contact.UId)
 	if err != nil {
 		return User{}, err
 	}
 	return contact, nil
-} 
+}

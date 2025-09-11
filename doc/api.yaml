@@ -20,12 +20,19 @@ info:
 security:
     - bearerAuth: []
 
+# Note: All authenticated endpoints (those requiring bearerAuth) will return 
+# a 401 Unauthorized response if authentication fails. See the UnauthorizedError 
+# response definition in components for details.
+
 components:
     securitySchemes:
         bearerAuth:
             type: http
             scheme: bearer
-            bearerFormat: JWT
+            bearerFormat: UUID
+            description: |-
+                Bearer token authentication using User UUID as the token.
+                The token should be the UUID of an existing user in the system.
 
     schemas:
         User:
@@ -275,6 +282,31 @@ components:
             required:
                 - message
 
+    responses:
+        UnauthorizedError:
+            description: Authentication information is missing or invalid
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+                    examples:
+                        missing_header:
+                            summary: Missing Authorization header
+                            value:
+                                message: "Authorization header required"
+                        invalid_format:
+                            summary: Invalid authorization format
+                            value:
+                                message: "Invalid authorization format. Use 'Bearer <token>'"
+                        invalid_token:
+                            summary: Invalid token format
+                            value:
+                                message: "Invalid token format"
+                        user_not_found:
+                            summary: User not found
+                            value:
+                                message: "Invalid token - user not found"
+
 paths:
     /session:
         post:
@@ -321,6 +353,8 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/User'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
                 '500':
                     description: Internal server error
                     content:
@@ -361,6 +395,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
                 '404':
                     description: User not found
                     content:

@@ -91,10 +91,10 @@ func run() error {
 		logger.WithError(err).Error("error opening SQLite DB")
 		return fmt.Errorf("opening SQLite: %w", err)
 	}
-	
+
 	// Set connection pool settings for better concurrency
-	dbconn.SetMaxOpenConns(10)  // Allow up to 10 concurrent connections
-	dbconn.SetMaxIdleConns(5)   // Keep 5 idle connections
+	dbconn.SetMaxOpenConns(10)           // Allow up to 10 concurrent connections
+	dbconn.SetMaxIdleConns(5)            // Keep 5 idle connections
 	dbconn.SetConnMaxLifetime(time.Hour) // Connections expire after 1 hour
 	defer func() {
 		logger.Debug("database stopping")

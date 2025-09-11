@@ -9,4 +9,4 @@ import (
 
 func (rt *_router) serveWs(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	w.WriteHeader(http.StatusNotImplemented)
-} 
+}

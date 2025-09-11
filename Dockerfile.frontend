@@ -25,6 +25,9 @@ RUN yarn vite build --mode production
 # Production stage
 FROM nginx:alpine
 
+# Install wget for health checks
+RUN apk --no-cache add wget
+
 # Copy built files to nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 

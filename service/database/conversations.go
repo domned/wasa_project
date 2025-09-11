@@ -19,59 +19,64 @@ func (db *appdbimpl) GetAllConversations() ([]Conversation, error) {
 	defer rows.Close()
 
 	var conversations []Conversation
-	   for rows.Next() {
-		   var conv Conversation
-		   var participantsJSON string
-		   var name sql.NullString
-		   var picture sql.NullString
-		   err := rows.Scan(&conv.CId, &participantsJSON, &name, &picture)
-		   if err != nil {
-			   return nil, err
-		   }
-		   if name.Valid {
-			   conv.Name = name.String
-		   } else {
-			   conv.Name = ""
-		   }
-		   if picture.Valid {
-			   conv.Picture = picture.String
-		   } else {
-			   conv.Picture = ""
-		   }
-			  var participantIDs []string
-			  
-			  // Try to unmarshal as string array first (new format)
-			  err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
-			  if err != nil {
-				  // If that fails, try to unmarshal as User object array (old format)
-				  var participantObjects []User
-				  err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
-				  if err != nil {
-					  return nil, err
-				  }
-				  // Extract IDs from User objects
-				  for _, participant := range participantObjects {
-					  participantIDs = append(participantIDs, participant.UId)
-				  }
-			  }
-			  var participants []User
-			  for _, uid := range participantIDs {
-				  var user User
-				  var upic sql.NullString
-				  err := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&user.UId, &user.Username, &upic)
-				  if err != nil {
-					  return nil, err
-				  }
-				  if upic.Valid {
-					  user.Picture = upic.String
-				  } else {
-					  user.Picture = ""
-				  }
-				  participants = append(participants, user)
-			  }
-			  conv.Participants = participants
-		   conversations = append(conversations, conv)
-	   }
+	for rows.Next() {
+		var conv Conversation
+		var participantsJSON string
+		var name sql.NullString
+		var picture sql.NullString
+		err := rows.Scan(&conv.CId, &participantsJSON, &name, &picture)
+		if err != nil {
+			return nil, err
+		}
+		if name.Valid {
+			conv.Name = name.String
+		} else {
+			conv.Name = ""
+		}
+		if picture.Valid {
+			conv.Picture = picture.String
+		} else {
+			conv.Picture = ""
+		}
+		var participantIDs []string
+
+		// Try to unmarshal as string array first (new format)
+		err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
+		if err != nil {
+			// If that fails, try to unmarshal as User object array (old format)
+			var participantObjects []User
+			err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
+			if err != nil {
+				return nil, err
+			}
+			// Extract IDs from User objects
+			for _, participant := range participantObjects {
+				participantIDs = append(participantIDs, participant.UId)
+			}
+		}
+		var participants []User
+		for _, uid := range participantIDs {
+			var user User
+			var upic sql.NullString
+			err := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&user.UId, &user.Username, &upic)
+			if err != nil {
+				return nil, err
+			}
+			if upic.Valid {
+				user.Picture = upic.String
+			} else {
+				user.Picture = ""
+			}
+			participants = append(participants, user)
+		}
+		conv.Participants = participants
+		conversations = append(conversations, conv)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return conversations, nil
 }
 
@@ -98,7 +103,7 @@ func (db *appdbimpl) CreateConversation(participants []User, name string) (Conve
 		rand.Seed(time.Now().UnixNano())
 		conversationName = demoNames[rand.Intn(len(demoNames))]
 	}
-	
+
 	rand.Seed(time.Now().UnixNano())
 	avatar := demoAvatars[rand.Intn(len(demoAvatars))]
 
@@ -113,7 +118,7 @@ func (db *appdbimpl) CreateConversation(participants []User, name string) (Conve
 		return Conversation{}, err
 	}
 
-	_, err = db.c.Exec("INSERT INTO conversations (id, participants, name, picture) VALUES (?, ?, ?, ?)", 
+	_, err = db.c.Exec("INSERT INTO conversations (id, participants, name, picture) VALUES (?, ?, ?, ?)",
 		id.String(), string(participantsJSON), conversationName, avatar)
 	if err != nil {
 		return Conversation{}, err
@@ -145,7 +150,7 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 		LEFT JOIN messages m ON latest.conversation_id = m.conversation_id AND latest.max_rowid = m.rowid
 		LEFT JOIN users u ON m.sender_id = u.id
 		ORDER BY COALESCE(m.rowid, 0) DESC`)
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -163,13 +168,13 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 		var lastMsgImageUrl sql.NullString
 		var lastMsgSenderUsername sql.NullString
 		var lastMsgTime sql.NullInt64
-		
-		err := rows.Scan(&conv.CId, &participantsJSON, &name, &picture, 
+
+		err := rows.Scan(&conv.CId, &participantsJSON, &name, &picture,
 			&lastMsgId, &lastMsgSenderId, &lastMsgText, &lastMsgImageUrl, &lastMsgSenderUsername, &lastMsgTime)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if name.Valid {
 			conv.Name = name.String
 		} else {
@@ -182,7 +187,7 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 		}
 
 		var participantIDs []string
-		
+
 		// Try to unmarshal as string array first (new format)
 		err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
 		if err != nil {
@@ -197,7 +202,7 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 				participantIDs = append(participantIDs, participant.UId)
 			}
 		}
-		
+
 		// Only include conversations where the user is a participant
 		found := false
 		for _, pid := range participantIDs {
@@ -206,7 +211,7 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 				break
 			}
 		}
-		
+
 		if found {
 			var participants []User
 			for _, uid := range participantIDs {
@@ -222,30 +227,35 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 				participants = append(participants, u)
 			}
 			conv.Participants = participants
-			
+
 			// Add last message information if available
 			if lastMsgId.Valid {
 				conv.LastMessage = &Message{
-					Id: lastMsgId.String,
-					SenderId: lastMsgSenderId.String,
-					Text: lastMsgText.String,
-					ImageUrl: lastMsgImageUrl.String,
+					Id:             lastMsgId.String,
+					SenderId:       lastMsgSenderId.String,
+					Text:           lastMsgText.String,
+					ImageUrl:       lastMsgImageUrl.String,
 					SenderUsername: lastMsgSenderUsername.String,
 				}
 				if lastMsgTime.Valid {
 					conv.LastMessageTime = fmt.Sprintf("%d", lastMsgTime.Int64)
 				}
 			}
-			
+
 			// Get unread count for this conversation
 			unreadCount, err := db.GetUnreadCount(conv.CId, user.UId)
 			if err == nil {
 				conv.UnreadCount = unreadCount
 			}
-			
+
 			conversations = append(conversations, conv)
 		}
 	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return conversations, nil
 }
 
@@ -258,115 +268,115 @@ func (db *appdbimpl) GetConversation(cid string) (Conversation, error) {
 		return Conversation{}, err
 	}
 
-	   var participantIDs []string
-	   
-	   // Try to unmarshal as string array first (new format)
-	   err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
-	   if err != nil {
-		   // If that fails, try to unmarshal as User object array (old format)
-		   var participantObjects []User
-		   err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
-		   if err != nil {
-			   return Conversation{}, err
-		   }
-		   // Extract IDs from User objects
-		   for _, participant := range participantObjects {
-			   participantIDs = append(participantIDs, participant.UId)
-		   }
-	   }
-	   var participants []User
-	   for _, uid := range participantIDs {
-		   var user User
-		   var picture sql.NullString
-		   err := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&user.UId, &user.Username, &picture)
-		   if err != nil {
-			   return Conversation{}, err
-		   }
-		   if picture.Valid {
-			   user.Picture = picture.String
-		   } else {
-			   user.Picture = ""
-		   }
-		   participants = append(participants, user)
-	   }
-	   conv.Participants = participants
-	   return conv, nil
+	var participantIDs []string
+
+	// Try to unmarshal as string array first (new format)
+	err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
+	if err != nil {
+		// If that fails, try to unmarshal as User object array (old format)
+		var participantObjects []User
+		err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
+		if err != nil {
+			return Conversation{}, err
+		}
+		// Extract IDs from User objects
+		for _, participant := range participantObjects {
+			participantIDs = append(participantIDs, participant.UId)
+		}
+	}
+	var participants []User
+	for _, uid := range participantIDs {
+		var user User
+		var picture sql.NullString
+		err := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&user.UId, &user.Username, &picture)
+		if err != nil {
+			return Conversation{}, err
+		}
+		if picture.Valid {
+			user.Picture = picture.String
+		} else {
+			user.Picture = ""
+		}
+		participants = append(participants, user)
+	}
+	conv.Participants = participants
+	return conv, nil
 }
 
 func (db *appdbimpl) AddToGroup(cid string, user User) (Conversation, error) {
-	   // Fetch current participant IDs
-	   var participantsJSON string
-	   err := db.c.QueryRow("SELECT participants FROM conversations WHERE id = ?", cid).Scan(&participantsJSON)
-	   if err != nil {
-		   return Conversation{}, err
-	   }
-	   var participantIDs []string
-	   
-	   // Try to unmarshal as string array first (new format)
-	   err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
-	   if err != nil {
-		   // If that fails, try to unmarshal as User object array (old format)
-		   var participantObjects []User
-		   err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
-		   if err != nil {
-			   return Conversation{}, err
-		   }
-		   // Extract IDs from User objects
-		   for _, participant := range participantObjects {
-			   participantIDs = append(participantIDs, participant.UId)
-		   }
-	   }
-	   // Add new user if not already present
-	   for _, pid := range participantIDs {
-		   if pid == user.UId {
-			   return db.GetConversation(cid) // already a member
-		   }
-	   }
-	   participantIDs = append(participantIDs, user.UId)
-	   newJSON, _ := json.Marshal(participantIDs)
-	   _, err = db.c.Exec("UPDATE conversations SET participants = ? WHERE id = ?", string(newJSON), cid)
-	   if err != nil {
-		   return Conversation{}, err
-	   }
-	   return db.GetConversation(cid)
+	// Fetch current participant IDs
+	var participantsJSON string
+	err := db.c.QueryRow("SELECT participants FROM conversations WHERE id = ?", cid).Scan(&participantsJSON)
+	if err != nil {
+		return Conversation{}, err
+	}
+	var participantIDs []string
+
+	// Try to unmarshal as string array first (new format)
+	err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
+	if err != nil {
+		// If that fails, try to unmarshal as User object array (old format)
+		var participantObjects []User
+		err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
+		if err != nil {
+			return Conversation{}, err
+		}
+		// Extract IDs from User objects
+		for _, participant := range participantObjects {
+			participantIDs = append(participantIDs, participant.UId)
+		}
+	}
+	// Add new user if not already present
+	for _, pid := range participantIDs {
+		if pid == user.UId {
+			return db.GetConversation(cid) // already a member
+		}
+	}
+	participantIDs = append(participantIDs, user.UId)
+	newJSON, _ := json.Marshal(participantIDs)
+	_, err = db.c.Exec("UPDATE conversations SET participants = ? WHERE id = ?", string(newJSON), cid)
+	if err != nil {
+		return Conversation{}, err
+	}
+	return db.GetConversation(cid)
 }
 
 func (db *appdbimpl) LeaveGroup(cid string, user User) (Conversation, error) {
-	   // Fetch current participant IDs
-	   var participantsJSON string
-	   err := db.c.QueryRow("SELECT participants FROM conversations WHERE id = ?", cid).Scan(&participantsJSON)
-	   if err != nil {
-		   return Conversation{}, err
-	   }
-	   var participantIDs []string
-	   
-	   // Try to unmarshal as string array first (new format)
-	   err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
-	   if err != nil {
-		   // If that fails, try to unmarshal as User object array (old format)
-		   var participantObjects []User
-		   err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
-		   if err != nil {
-			   return Conversation{}, err
-		   }
-		   // Extract IDs from User objects
-		   for _, participant := range participantObjects {
-			   participantIDs = append(participantIDs, participant.UId)
-		   }
-	   }
-	   // Remove user
-	   var newIDs []string
-	   for _, pid := range participantIDs {
-		   if pid != user.UId {
-			   newIDs = append(newIDs, pid)
-		   }
-	   }
-	   newJSON, _ := json.Marshal(newIDs)
-	   _, err = db.c.Exec("UPDATE conversations SET participants = ? WHERE id = ?", string(newJSON), cid)
-	   if err != nil {
-		   return Conversation{}, err
-	   }
-	   return db.GetConversation(cid)
+	// Fetch current participant IDs
+	var participantsJSON string
+	err := db.c.QueryRow("SELECT participants FROM conversations WHERE id = ?", cid).Scan(&participantsJSON)
+	if err != nil {
+		return Conversation{}, err
+	}
+	var participantIDs []string
+
+	// Try to unmarshal as string array first (new format)
+	err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
+	if err != nil {
+		// If that fails, try to unmarshal as User object array (old format)
+		var participantObjects []User
+		err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
+		if err != nil {
+			return Conversation{}, err
+		}
+		// Extract IDs from User objects
+		for _, participant := range participantObjects {
+			participantIDs = append(participantIDs, participant.UId)
+		}
+	}
+	// Remove user
+	var newIDs []string
+	for _, pid := range participantIDs {
+		if pid != user.UId {
+			newIDs = append(newIDs, pid)
+		}
+	}
+	newJSON, _ := json.Marshal(newIDs)
+	_, err = db.c.Exec("UPDATE conversations SET participants = ? WHERE id = ?", string(newJSON), cid)
+	if err != nil {
+		return Conversation{}, err
+	}
+	return db.GetConversation(cid)
 }
 
 func (db *appdbimpl) SetGroupName(cid string, name string) (Conversation, error) {
@@ -380,4 +390,24 @@ func (db *appdbimpl) SetGroupPhoto(cid string, picture string) (Conversation, er
 		return Conversation{}, err
 	}
 	return db.GetConversation(cid)
-} 
+}
+
+func (db *appdbimpl) GetUnreadCount(conversationId string, userId string) (int, error) {
+	var count int
+	err := db.c.QueryRow(`
+		SELECT COUNT(*) 
+		FROM messages 
+		WHERE conversation_id = ? 
+		AND sender_id != ? 
+		AND timestamp > COALESCE(
+			(SELECT last_read_timestamp FROM conversation_participants 
+			 WHERE conversation_id = ? AND user_id = ?), 
+			'1970-01-01 00:00:00'
+		)`, conversationId, userId, conversationId, userId).Scan(&count)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

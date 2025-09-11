@@ -17,5 +17,9 @@ func (rt *_router) getAllConversations(w http.ResponseWriter, r *http.Request, p
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(convs)
+	if err := json.NewEncoder(w).Encode(convs); err != nil {
+		ctx.Logger.WithError(err).Error("failed to encode conversations response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }

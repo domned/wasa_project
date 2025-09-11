@@ -1,19 +1,63 @@
 package database
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/gofrs/uuid"
 )
 
-func (db *appdbimpl) SendMessage(cid string, user User, message string) (Conversation, error) {
-	return db.SendMessageWithImage(cid, user, message, "")
+func (db *appdbimpl) SendMessage(cid string, user User, content string) (Conversation, error) {
+	id, err := uuid.NewV4()
+	if err != nil {
+		return Conversation{}, err
+	}
+
+	conversation, err := db.GetConversation(cid)
+	if err != nil {
+		return Conversation{}, err
+	}
+
+	// Check if user is participant
+	found := false
+	for _, participant := range conversation.Participants {
+		if participant.UId == user.UId {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return Conversation{}, err
+	}
+
+	_, err = db.c.Exec("INSERT INTO messages (id, conversation_id, sender_id, message) VALUES (?, ?, ?, ?)",
+		id.String(), cid, user.UId, content)
+	if err != nil {
+		return Conversation{}, err
+	}
+
+	return db.GetConversation(cid)
 }
 
 func (db *appdbimpl) SendMessageWithImage(cid string, user User, message string, imageUrl string) (Conversation, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
+		return Conversation{}, err
+	}
+
+	conversation, err := db.GetConversation(cid)
+	if err != nil {
+		return Conversation{}, err
+	}
+
+	// Check if user is participant
+	found := false
+	for _, participant := range conversation.Participants {
+		if participant.UId == user.UId {
+			found = true
+			break
+		}
+	}
+	if !found {
 		return Conversation{}, err
 	}
 
@@ -35,30 +79,56 @@ func (db *appdbimpl) DeleteMessage(cid string, user User, mid string) (Conversat
 }
 
 func (db *appdbimpl) ForwardMessage(cid string, user User, mid string) (Conversation, error) {
-	var message, imageUrl string
-	err := db.c.QueryRow("SELECT message, COALESCE(image_url, '') FROM messages WHERE id = ?", mid).Scan(&message, &imageUrl)
+	var message string
+	err := db.c.QueryRow("SELECT message FROM messages WHERE id = ?", mid).Scan(&message)
 	if err != nil {
 		return Conversation{}, err
 	}
 
-	return db.SendMessageWithImage(cid, user, message, imageUrl)
-}
-
-func (db *appdbimpl) ReactToMessage(cid string, user User, mid string, emoji string) (Conversation, error) {
-	// Check if reaction already exists
-	var existingId string
-	err := db.c.QueryRow("SELECT id FROM reactions WHERE message_id = ? AND sender_id = ? AND emoji = ?",
-		mid, user.UId, emoji).Scan(&existingId)
-	
-	if err == nil {
-		// Reaction exists, remove it (toggle off)
-		return db.RemoveReaction(cid, user, mid, emoji)
-	} else if err != sql.ErrNoRows {
-		// Some other error occurred
+	_, err = db.SendMessage(cid, user, message)
+	if err != nil {
 		return Conversation{}, err
 	}
 
-	// Reaction doesn't exist (sql.ErrNoRows), add it
+	return db.GetConversation(cid)
+}
+
+func (db *appdbimpl) getConversationMessages(cid string) ([]Message, error) {
+	rows, err := db.c.Query(`
+		SELECT m.id, m.conversation_id, m.message, m.sender_id, m.timestamp, u.username
+		FROM messages m 
+		JOIN users u ON m.sender_id = u.id 
+		WHERE m.conversation_id = ? 
+		ORDER BY m.timestamp ASC`, cid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var m Message
+		var sender User
+		var timestamp time.Time
+		var conversationId string
+		err := rows.Scan(&m.Id, &conversationId, &m.Text, &sender.UId, &timestamp, &sender.Username)
+		if err != nil {
+			return nil, err
+		}
+		m.SenderId = sender.UId
+		m.SenderUsername = sender.Username
+		m.Time = timestamp.Format(time.RFC3339)
+		messages = append(messages, m)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return messages, nil
+}
+
+func (db *appdbimpl) ReactToMessage(cid string, user User, mid string, emoji string) (Conversation, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return Conversation{}, err
@@ -73,9 +143,9 @@ func (db *appdbimpl) ReactToMessage(cid string, user User, mid string, emoji str
 	return db.GetConversation(cid)
 }
 
-func (db *appdbimpl) RemoveReaction(cid string, user User, mid string, emoji string) (Conversation, error) {
-	_, err := db.c.Exec("DELETE FROM reactions WHERE message_id = ? AND sender_id = ? AND emoji = ?",
-		mid, user.UId, emoji)
+func (db *appdbimpl) RemoveReaction(cid string, user User, mid string, reactionId string) (Conversation, error) {
+	_, err := db.c.Exec("DELETE FROM reactions WHERE id = ? AND sender_id = ?",
+		reactionId, user.UId)
 	if err != nil {
 		return Conversation{}, err
 	}
@@ -99,7 +169,8 @@ func (db *appdbimpl) CommentMessage(cid string, user User, mid string, comment s
 }
 
 func (db *appdbimpl) UncommentMessage(cid string, user User, mid string, commentId string) (Conversation, error) {
-	_, err := db.c.Exec("DELETE FROM comments WHERE id = ? AND sender_id = ?", commentId, user.UId)
+	_, err := db.c.Exec("DELETE FROM comments WHERE id = ? AND sender_id = ?",
+		commentId, user.UId)
 	if err != nil {
 		return Conversation{}, err
 	}
@@ -108,24 +179,14 @@ func (db *appdbimpl) UncommentMessage(cid string, user User, mid string, comment
 }
 
 func (db *appdbimpl) MarkMessageAsRead(messageId string, userId string) error {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return err
-	}
+	_, err := db.c.Exec(`
+		UPDATE conversation_participants 
+		SET last_read_timestamp = (
+			SELECT timestamp FROM messages WHERE id = ?
+		) 
+		WHERE user_id = ? AND conversation_id = (
+			SELECT conversation_id FROM messages WHERE id = ?
+		)`, messageId, userId, messageId)
 
-	// Use INSERT OR REPLACE to handle the case where the message is already marked as read
-	_, err = db.c.Exec(`INSERT OR REPLACE INTO read_status (id, message_id, user_id, read_at) 
-		VALUES (?, ?, ?, ?)`, id.String(), messageId, userId, time.Now().Unix())
 	return err
-}
-
-func (db *appdbimpl) GetUnreadCount(conversationId string, userId string) (int, error) {
-	var count int
-	err := db.c.QueryRow(`
-		SELECT COUNT(*) 
-		FROM messages m 
-		LEFT JOIN read_status r ON m.id = r.message_id AND r.user_id = ?
-		WHERE m.conversation_id = ? AND m.sender_id != ? AND r.message_id IS NULL`,
-		userId, conversationId, userId).Scan(&count)
-	return count, err
 }

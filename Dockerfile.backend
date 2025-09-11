@@ -23,13 +23,16 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o webapi ./cmd/weba
 FROM alpine:latest
 
 # Install runtime dependencies
-RUN apk --no-cache add ca-certificates sqlite
+RUN apk --no-cache add ca-certificates sqlite wget
 
 # Set working directory
 WORKDIR /root/
 
 # Copy the binary from builder stage
 COPY --from=builder /app/webapi .
+
+# Make the binary executable
+RUN chmod +x ./webapi
 
 # Copy any necessary config files
 COPY --from=builder /app/demo/config.yml ./demo/

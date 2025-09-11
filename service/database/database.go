@@ -36,37 +36,40 @@ import (
 	"fmt"
 	"strings"
 )
+
 type User struct {
-	UId string `json:"id"`
+	UId      string `json:"id"`
 	Username string `json:"username"`
-	Picture string `json:"picture,omitempty"`
+	Picture  string `json:"picture,omitempty"`
 }
 
 type Message struct {
-	Id string `json:"id"`
-	SenderId string `json:"senderId"`
-	Text string `json:"text"`
-	ImageUrl string `json:"imageUrl,omitempty"`
-	SenderUsername string `json:"senderUsername"`
-	Time string `json:"time,omitempty"`
-	Reactions map[string]interface{} `json:"reactions,omitempty"`
-	IsRead bool `json:"isRead,omitempty"`
-	ReadBy []string `json:"readBy,omitempty"`
+	Id             string                 `json:"id"`
+	SenderId       string                 `json:"senderId"`
+	Text           string                 `json:"text"`
+	ImageUrl       string                 `json:"imageUrl,omitempty"`
+	SenderUsername string                 `json:"senderUsername"`
+	Time           string                 `json:"time,omitempty"`
+	Reactions      map[string]interface{} `json:"reactions,omitempty"`
+	IsRead         bool                   `json:"isRead,omitempty"`
+	ReadBy         []string               `json:"readBy,omitempty"`
 }
 
 type Conversation struct {
-	CId string `json:"id"`
-	Name string `json:"name"`
-	Picture string `json:"picture"`
-	Participants []User `json:"participants"`
-	LastMessage *Message `json:"lastMessage,omitempty"`
-	LastMessageTime string `json:"lastMessageTime,omitempty"`
-	UnreadCount int `json:"unreadCount,omitempty"`
+	CId             string   `json:"id"`
+	Name            string   `json:"name"`
+	Picture         string   `json:"picture"`
+	Participants    []User   `json:"participants"`
+	LastMessage     *Message `json:"lastMessage,omitempty"`
+	LastMessageTime string   `json:"lastMessageTime,omitempty"`
+	UnreadCount     int      `json:"unreadCount,omitempty"`
 }
+
 // AppDatabase is the high level interface for the DB
 type AppDatabase interface {
 	Ping() error
 	DoLogin(user User)
+	GetUserByID(userID string) (User, error)
 	ListUsers(username string) ([]User, error)
 	SetMyUserName(username string) (User, error)
 	SetMyPhoto(picture string) (User, error)
@@ -114,24 +117,24 @@ func New(db *sql.DB) (AppDatabase, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error enabling WAL mode: %w", err)
 	}
-	
+
 	// Set proper SQLite settings for concurrency
 	_, err = db.Exec("PRAGMA foreign_keys = ON")
 	if err != nil {
 		return nil, fmt.Errorf("error enabling foreign keys: %w", err)
 	}
-	
+
 	_, err = db.Exec("PRAGMA busy_timeout = 30000") // 30 second timeout
 	if err != nil {
 		return nil, fmt.Errorf("error setting busy timeout: %w", err)
 	}
-	
+
 	_, err = db.Exec("PRAGMA synchronous = NORMAL")
 	if err != nil {
 		return nil, fmt.Errorf("error setting synchronous mode: %w", err)
 	}
 
-	//create all tables
+	// create all tables
 	usersTable := `CREATE TABLE IF NOT EXISTS users (
 		id TEXT PRIMARY KEY,
 		username TEXT NOT NULL,
@@ -159,7 +162,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 	);`
 	if _, err := db.Exec(messagesTable); err != nil {
-		return nil, fmt.Errorf("error creating messages table: %w",err)
+		return nil, fmt.Errorf("error creating messages table: %w", err)
 	}
 
 	reactionsTable := `CREATE TABLE IF NOT EXISTS reactions (
@@ -171,7 +174,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		UNIQUE(message_id, sender_id, emoji)
 	);`
 	if _, err := db.Exec(reactionsTable); err != nil {
-		return nil, fmt.Errorf("error creating reactions table: %w",err)
+		return nil, fmt.Errorf("error creating reactions table: %w", err)
 	}
 
 	commentsTable := `CREATE TABLE IF NOT EXISTS comments (
@@ -182,7 +185,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE
 	);`
 	if _, err := db.Exec(commentsTable); err != nil {
-		return nil, fmt.Errorf("error creating comments table: %w",err)
+		return nil, fmt.Errorf("error creating comments table: %w", err)
 	}
 	contactsTable := `CREATE TABLE IF NOT EXISTS contacts (
 		id TEXT PRIMARY KEY,
@@ -192,7 +195,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		FOREIGN KEY(contact_id) REFERENCES users(id) ON DELETE CASCADE
 	);`
 	if _, err := db.Exec(contactsTable); err != nil {
-		return nil, fmt.Errorf("error creating contacts table: %w",err)
+		return nil, fmt.Errorf("error creating contacts table: %w", err)
 	}
 
 	readStatusTable := `CREATE TABLE IF NOT EXISTS read_status (
@@ -205,7 +208,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		UNIQUE(message_id, user_id)
 	);`
 	if _, err := db.Exec(readStatusTable); err != nil {
-		return nil, fmt.Errorf("error creating read_status table: %w",err)
+		return nil, fmt.Errorf("error creating read_status table: %w", err)
 	}
 
 	// Add image_url column to messages table if it doesn't exist

@@ -21,7 +21,7 @@ func (rt *_router) addContact(w http.ResponseWriter, r *http.Request, ps httprou
 	var request struct {
 		Username string `json:"username"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
@@ -58,7 +58,7 @@ func (rt *_router) addContact(w http.ResponseWriter, r *http.Request, ps httprou
 	// Add contact
 	user := database.User{UId: userId, Username: userUsername}
 	contact := database.User{UId: contactId, Username: contactUsername, Picture: contactPicture}
-	
+
 	_, err = rt.db.AddContact(user, contact)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -107,7 +107,7 @@ func (rt *_router) removeContact(w http.ResponseWriter, r *http.Request, ps http
 	// Get user ID and contact ID from URL
 	userId := ps.ByName("id")
 	contactId := ps.ByName("contactId")
-	
+
 	if userId == "" || contactId == "" {
 		http.Error(w, "missing user id or contact id", http.StatusBadRequest)
 		return
@@ -132,7 +132,7 @@ func (rt *_router) removeContact(w http.ResponseWriter, r *http.Request, ps http
 	// Remove contact
 	user := database.User{UId: userId, Username: userUsername}
 	contact := database.User{UId: contactId, Username: contactUsername}
-	
+
 	_, err = rt.db.RemoveContact(user, contact)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -140,4 +140,4 @@ func (rt *_router) removeContact(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-} 
+}
