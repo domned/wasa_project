@@ -254,6 +254,9 @@ function getLastMessagePreview(text, imageUrl) {
 
 // Sort chats by last message time (newest first)
 function sortChatsByLastMessage(chats) {
+	if (!Array.isArray(chats)) {
+		return [];
+	}
 	return chats.sort((a, b) => {
 		const aTime = a.lastMessageTime ? parseInt(a.lastMessageTime) : 0;
 		const bTime = b.lastMessageTime ? parseInt(b.lastMessageTime) : 0;
@@ -361,8 +364,10 @@ async function fetchChats() {
 	error.value = null;
 	try {
 		const res = await axios.get(`/users/${props.userId}/conversations`);
+		// Handle null or empty response
+		const chatData = res.data || [];
 		// Sort chats by last message time
-		const sortedChats = sortChatsByLastMessage(res.data);
+		const sortedChats = sortChatsByLastMessage(chatData);
 		chats.value = sortedChats;
 		filteredChats.value = sortedChats; // Initialize filtered chats
 		// Emit chats to parent so App.vue can sync selectedChat
