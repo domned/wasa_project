@@ -65,7 +65,7 @@
 				No chats match your search.
 			</div>
 			<div v-else-if="filteredChats.length === 0" class="sidebar-empty">
-				No chats found.
+				No conversations
 			</div>
 			<div
 				v-else

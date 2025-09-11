@@ -68,8 +68,12 @@ function handleLoginSuccess(userData) {
 	userId.value = userData.userId;
 	username.value = userData.username;
 	isLoggedIn.value = true;
-	fetchUserData();
-	startChatPolling(); // Start polling after login
+	
+	// Add a small delay to ensure localStorage is properly set
+	setTimeout(() => {
+		fetchUserData();
+		startChatPolling(); // Start polling after login
+	}, 100);
 }
 
 async function fetchUserData() {
