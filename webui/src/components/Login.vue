@@ -18,46 +18,14 @@
 					/>
 				</div>
 
-				<div
-					style="
-						background: red;
-						padding: 20px;
-						margin: 20px 0;
-						border: 5px solid blue;
-					"
+				<button
+					type="submit"
+					class="login-button"
+					:disabled="isLoading || username.length < 3"
 				>
-					<p style="color: white; font-size: 16px">
-						DEBUG: Button container
-					</p>
-					<p style="color: white">
-						Username length: {{ username.length }}
-					</p>
-					<p style="color: white">Is loading: {{ isLoading }}</p>
-					<p style="color: white">
-						Button disabled: {{ isLoading || username.length < 3 }}
-					</p>
-
-					<button
-						type="submit"
-						class="login-button"
-						:disabled="isLoading || username.length < 3"
-						style="
-							background: lime !important;
-							color: black !important;
-							padding: 20px !important;
-							font-size: 20px !important;
-							border: 3px solid red !important;
-							display: block !important;
-							width: 100% !important;
-							margin: 10px 0 !important;
-							position: relative !important;
-							z-index: 9999 !important;
-						"
-					>
-						<span v-if="isLoading">Logging in...</span>
-						<span v-else>LOGIN BUTTON</span>
-					</button>
-				</div>
+					<span v-if="isLoading">Logging in...</span>
+					<span v-else>Login</span>
+				</button>
 			</form>
 
 			<div v-if="error" class="error-message">

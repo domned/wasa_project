@@ -20,7 +20,7 @@
 
 		<!-- Empty state -->
 		<div
-			v-if="!loading && !error && contacts.length === 0"
+			v-if="!loading && !error && contacts && contacts.length === 0"
 			class="contacts-empty"
 		>
 			<p>No contacts found.</p>
@@ -29,7 +29,7 @@
 
 		<!-- Contacts list -->
 		<div
-			v-if="!loading && !error && contacts.length > 0"
+			v-if="!loading && !error && contacts && contacts.length > 0"
 			class="contacts-list"
 		>
 			<div
@@ -42,7 +42,7 @@
 				</div>
 				<div class="contact-info">
 					<div class="contact-name">{{ contact.username }}</div>
-					<div class="contact-id">{{ contact.contactUserId }}</div>
+					<div class="contact-id">{{ contact.id }}</div>
 				</div>
 				<div class="contact-actions">
 					<button
@@ -189,6 +189,7 @@ async function loadContacts() {
 		contacts.value = await api.contacts.list(props.userId);
 	} catch (err) {
 		error.value = 'Failed to load contacts';
+		contacts.value = []; // Ensure contacts is always an array
 		console.error('Failed to load contacts:', err);
 	} finally {
 		loading.value = false;
@@ -207,7 +208,7 @@ async function searchUsers() {
 		const currentUserId = props.userId;
 
 		// Filter users by search query and exclude current user and existing contacts
-		const existingContactIds = contacts.value.map((c) => c.contactUserId);
+		const existingContactIds = (contacts.value || []).map((c) => c.id);
 
 		searchResults.value = allUsers
 			.filter(
@@ -243,6 +244,11 @@ async function addContact() {
 			props.userId,
 			selectedUser.value.id
 		);
+
+		// Ensure contacts is an array before pushing
+		if (!contacts.value) {
+			contacts.value = [];
+		}
 
 		// Add to local contacts list
 		contacts.value.push(newContact);
@@ -280,7 +286,7 @@ async function startConversation(contact) {
 	try {
 		const conversation = await api.conversations.create(props.userId, [
 			props.userId,
-			contact.contactUserId,
+			contact.id,
 		]);
 
 		// Emit event to parent to handle conversation creation
@@ -311,21 +317,24 @@ defineExpose({
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	padding: 16px;
+	padding: 12px;
+	overflow: hidden;
 }
 
 .contacts-header {
 	display: flex;
-	justify-content: between;
+	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 16px;
-	padding-bottom: 12px;
+	margin-bottom: 8px;
+	padding-bottom: 8px;
 	border-bottom: 1px solid var(--border-color);
+	flex-shrink: 0;
 }
 
 .contacts-header h3 {
 	margin: 0;
 	flex: 1;
+	font-size: 16px;
 }
 
 .contacts-loading,
@@ -338,16 +347,18 @@ defineExpose({
 .contacts-list {
 	flex: 1;
 	overflow-y: auto;
+	min-height: 0;
 }
 
 .contact-item {
 	display: flex;
 	align-items: center;
-	padding: 12px;
+	padding: 6px 8px;
 	border: 1px solid var(--border-color);
-	border-radius: 8px;
-	margin-bottom: 8px;
+	border-radius: 4px;
+	margin-bottom: 4px;
 	background: var(--bg-surface);
+	min-height: 40px;
 }
 
 .contact-item:hover {
@@ -355,8 +366,8 @@ defineExpose({
 }
 
 .contact-avatar {
-	width: 40px;
-	height: 40px;
+	width: 28px;
+	height: 28px;
 	border-radius: 50%;
 	background: var(--avatar-bg);
 	color: var(--avatar-text);
@@ -364,27 +375,42 @@ defineExpose({
 	align-items: center;
 	justify-content: center;
 	font-weight: bold;
-	margin-right: 12px;
+	margin-right: 8px;
+	font-size: 12px;
+	flex-shrink: 0;
 }
 
 .contact-info {
 	flex: 1;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .contact-name {
 	font-weight: 600;
 	color: var(--text-primary);
+	font-size: 13px;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .contact-id {
-	font-size: 0.85em;
+	font-size: 10px;
 	color: var(--text-muted);
 	font-family: monospace;
+	line-height: 1.2;
+	margin-top: 1px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .contact-actions {
 	display: flex;
-	gap: 4px;
+	gap: 2px;
+	flex-shrink: 0;
 }
 
 /* Modal styles */
@@ -589,7 +615,12 @@ defineExpose({
 }
 
 .btn-sm {
-	padding: 4px 8px;
-	font-size: 12px;
+	padding: 3px 6px;
+	font-size: 11px;
+	min-width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 </style>

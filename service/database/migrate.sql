@@ -3,7 +3,8 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL,
-    picture TEXT
+    picture TEXT,
+    last_seen INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS contacts (
@@ -55,4 +56,16 @@ CREATE TABLE IF NOT EXISTS read_status (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE(message_id, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS system_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL
+);
+
+-- Migration: Add last_seen column to existing users table if it doesn't exist
+-- This handles existing databases that don't have the last_seen column
+-- For new databases, the column is already included in the CREATE TABLE above
+-- SQLite will ignore this if the column already exists (with IF NOT EXISTS logic in Go code)
 

@@ -52,5 +52,11 @@ func (rt *_router) Handler() http.Handler {
 	// WebSocket (should this be authenticated?)
 	r.GET("/ws", rt.wrap(rt.serveWs))
 
+	// Admin endpoints (should be authenticated in production)
+	r.GET("/admin/health", rt.wrapAuth(rt.getAdminHealth))
+	r.GET("/admin/stats", rt.wrapAuth(rt.getAdminStats))
+	r.GET("/admin/logs", rt.wrapAuth(rt.getAdminLogs))
+	r.GET("/admin/online-users", rt.wrapAuth(rt.getOnlineUsers))
+
 	return r
 }

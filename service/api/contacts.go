@@ -17,9 +17,9 @@ func (rt *_router) addContact(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	// Parse request body for contact username
+	// Parse request body for contact user ID
 	var request struct {
-		Username string `json:"username"`
+		ContactUserId string `json:"contactUserId"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -27,8 +27,8 @@ func (rt *_router) addContact(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	if request.Username == "" {
-		http.Error(w, "username cannot be empty", http.StatusBadRequest)
+	if request.ContactUserId == "" {
+		http.Error(w, "contactUserId cannot be empty", http.StatusBadRequest)
 		return
 	}
 
@@ -40,9 +40,9 @@ func (rt *_router) addContact(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	// Find contact by username
+	// Find contact by user ID
 	var contactId, contactUsername, contactPicture string
-	err = rt.db.GetRawDB().QueryRow("SELECT id, username, COALESCE(picture, '') FROM users WHERE username = ?", request.Username).
+	err = rt.db.GetRawDB().QueryRow("SELECT id, username, COALESCE(picture, '') FROM users WHERE id = ?", request.ContactUserId).
 		Scan(&contactId, &contactUsername, &contactPicture)
 	if err != nil {
 		http.Error(w, "contact not found", http.StatusNotFound)
@@ -52,6 +52,15 @@ func (rt *_router) addContact(w http.ResponseWriter, r *http.Request, ps httprou
 	// Don't allow adding self as contact
 	if contactId == userId {
 		http.Error(w, "cannot add yourself as contact", http.StatusBadRequest)
+		return
+	}
+
+	// Check if contact already exists
+	var existingContactId string
+	err = rt.db.GetRawDB().QueryRow("SELECT id FROM contacts WHERE user_id = ? AND contact_id = ?", userId, contactId).
+		Scan(&existingContactId)
+	if err == nil {
+		http.Error(w, "contact already exists", http.StatusConflict)
 		return
 	}
 

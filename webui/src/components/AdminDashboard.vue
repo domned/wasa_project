@@ -93,10 +93,6 @@
 					<div class="stat-number">{{ stats.activeConnections }}</div>
 					<div class="stat-label">WebSocket Connections</div>
 				</div>
-				<div class="stat-card">
-					<div class="stat-number">{{ stats.errorRate }}%</div>
-					<div class="stat-label">Error Rate</div>
-				</div>
 			</div>
 		</div>
 
@@ -180,38 +176,6 @@
 			</div>
 		</div>
 
-		<!-- System Actions -->
-		<div class="dashboard-section">
-			<h3>System Actions</h3>
-			<div class="actions-grid">
-				<button
-					class="btn btn-outline-info action-btn"
-					@click="clearLogs"
-				>
-					🗑️ Clear Logs
-				</button>
-				<button
-					class="btn btn-outline-warning action-btn"
-					@click="restartWebSocket"
-				>
-					🔄 Restart WebSocket
-				</button>
-				<button
-					class="btn btn-outline-success action-btn"
-					@click="backupData"
-					:disabled="isBackingUp"
-				>
-					💾 {{ isBackingUp ? 'Backing up...' : 'Backup Data' }}
-				</button>
-				<button
-					class="btn btn-outline-danger action-btn"
-					@click="showMaintenanceMode"
-				>
-					🔧 Maintenance Mode
-				</button>
-			</div>
-		</div>
-
 		<!-- Error Display -->
 		<div v-if="error" class="alert alert-danger">
 			{{ error }}
@@ -236,14 +200,12 @@ const stats = ref({
 	totalConversations: 0,
 	totalMessages: 0,
 	activeConnections: 0,
-	errorRate: 0,
 });
 
 const activeUsers = ref([]);
 const recentLogs = ref([]);
 const error = ref('');
 const isRefreshing = ref(false);
-const isBackingUp = ref(false);
 
 let refreshInterval = null;
 
@@ -300,7 +262,6 @@ async function loadStats() {
 				totalConversations: response.data.total_conversations || 0,
 				totalMessages: response.data.total_messages || 0,
 				activeConnections: response.data.active_connections || 0,
-				errorRate: response.data.error_rate || 0,
 			};
 		}
 	} catch (err) {
@@ -310,13 +271,18 @@ async function loadStats() {
 
 async function loadActiveUsers() {
 	try {
-		const response = await apiService.users.listAll();
-		if (response.success) {
-			activeUsers.value = response.data.map((user) => ({
-				...user,
-				lastActive: user.last_active || new Date().toISOString(),
-			}));
-		}
+		const [users, onlineUserIDs] = await Promise.all([
+			apiService.users.listAll(),
+			apiService.health.getOnlineUsers()
+		]);
+		
+		const onlineSet = new Set(onlineUserIDs);
+		
+		activeUsers.value = users.map((user) => ({
+			...user,
+			lastActive: user.last_seen ? new Date(user.last_seen * 1000).toISOString() : new Date().toISOString(),
+			online: onlineSet.has(user.id), // Check if user is in WebSocket connections
+		}));
 	} catch (err) {
 		console.error('Failed to load active users:', err);
 	}
@@ -399,69 +365,6 @@ async function disconnectUser(userId) {
 	}
 }
 
-async function clearLogs() {
-	if (!confirm('Clear all system logs? This action cannot be undone.'))
-		return;
-
-	try {
-		const response = await apiService.health.clearLogs();
-		if (response.success) {
-			recentLogs.value = [];
-		} else {
-			alert('Failed to clear logs');
-		}
-	} catch (err) {
-		console.error('Failed to clear logs:', err);
-		alert('Failed to clear logs');
-	}
-}
-
-async function restartWebSocket() {
-	if (
-		!confirm(
-			'Restart WebSocket service? This will disconnect all users briefly.'
-		)
-	)
-		return;
-
-	try {
-		const response = await apiService.health.restartWebSocket();
-		if (response.success) {
-			alert('WebSocket service restarted successfully');
-			await loadSystemHealth();
-		} else {
-			alert('Failed to restart WebSocket service');
-		}
-	} catch (err) {
-		console.error('Failed to restart WebSocket:', err);
-		alert('Failed to restart WebSocket service');
-	}
-}
-
-async function backupData() {
-	if (!confirm('Create a system backup? This may take a few minutes.'))
-		return;
-
-	isBackingUp.value = true;
-	try {
-		const response = await apiService.health.createBackup();
-		if (response.success) {
-			alert('Backup created successfully');
-		} else {
-			alert('Failed to create backup');
-		}
-	} catch (err) {
-		console.error('Failed to create backup:', err);
-		alert('Failed to create backup');
-	} finally {
-		isBackingUp.value = false;
-	}
-}
-
-function showMaintenanceMode() {
-	alert('Maintenance mode functionality would be implemented here');
-}
-
 function formatDate(dateString) {
 	if (!dateString) return 'Never';
 	const date = new Date(dateString);
@@ -481,7 +384,10 @@ function formatTime(dateString) {
 	max-width: 1200px;
 	margin: 0 auto;
 	background: var(--bg-primary);
-	min-height: 100vh;
+	height: 100%;
+	overflow-y: auto;
+	overflow-x: hidden;
+	box-sizing: border-box;
 }
 
 .dashboard-header {
@@ -732,17 +638,7 @@ function formatTime(dateString) {
 	color: var(--text-muted);
 }
 
-/* Actions */
-.actions-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-	gap: 1rem;
-}
 
-.action-btn {
-	padding: 0.75rem 1rem;
-	font-weight: 500;
-}
 
 /* Buttons */
 .btn {

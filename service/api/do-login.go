@@ -28,17 +28,26 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 	users, err := rt.db.ListUsers(req.Name)
 	var user database.User
 	if err != nil {
+		rt.sysLogger.LogError("Database error during user lookup: " + err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if len(users) > 0 {
 		user = users[0]
+		rt.sysLogger.LogInfo("User " + req.Name + " logged in successfully")
 	} else {
 		user, err = rt.db.SetMyUserName(req.Name)
 		if err != nil {
+			rt.sysLogger.LogError("Failed to create new user " + req.Name + ": " + err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		rt.sysLogger.LogInfo("New user " + req.Name + " registered and logged in")
+	}
+
+	// Update last seen timestamp
+	if err := rt.db.UpdateUserLastSeen(user.UId); err != nil {
+		rt.sysLogger.LogWarn("Failed to update last_seen for user " + req.Name + ": " + err.Error())
 	}
 	resp := map[string]string{"identifier": user.UId}
 	w.Header().Set("Content-Type", "application/json")

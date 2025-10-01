@@ -43,6 +43,13 @@ type User struct {
 	Picture  string `json:"picture,omitempty"`
 }
 
+type LogEntry struct {
+	ID        int    `json:"id"`
+	Timestamp string `json:"timestamp"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+}
+
 type Message struct {
 	Id             string                 `json:"id"`
 	SenderId       string                 `json:"senderId"`
@@ -97,6 +104,15 @@ type AppDatabase interface {
 	RemoveContact(user User, contact User) (User, error)
 	GetAllConversations() ([]Conversation, error)
 	GetRawDB() *sql.DB
+	
+	// Admin methods
+	GetUserCount() (int, error)
+	GetConversationCount() (int, error)
+	GetMessageCount() (int, error)
+	GetRecentLogs(limit int) ([]LogEntry, error)
+	AddLogEntry(level, message string) error
+	UpdateUserLastSeen(userID string) error
+	GetActiveUserCount() (int, error)
 }
 
 type appdbimpl struct {
@@ -139,7 +155,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 	usersTable := `CREATE TABLE IF NOT EXISTS users (
 		id TEXT PRIMARY KEY,
 		username TEXT NOT NULL,
-		picture TEXT
+		picture TEXT,
+		last_seen INTEGER DEFAULT 0
 	);`
 	if _, err := db.Exec(usersTable); err != nil {
 		return nil, fmt.Errorf("error creating users table: %w", err)
@@ -220,6 +237,28 @@ func New(db *sql.DB) (AppDatabase, error) {
 		// If it's not a duplicate column error, return the error
 		if !strings.Contains(err.Error(), "duplicate column") {
 			return nil, fmt.Errorf("error adding image_url column: %w", err)
+		}
+		// Otherwise, column already exists, continue
+	}
+
+	// Create system_logs table for admin functionality
+	systemLogsTable := `CREATE TABLE IF NOT EXISTS system_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		timestamp TEXT NOT NULL,
+		level TEXT NOT NULL,
+		message TEXT NOT NULL
+	);`
+	if _, err := db.Exec(systemLogsTable); err != nil {
+		return nil, fmt.Errorf("error creating system_logs table: %w", err)
+	}
+
+	// Add last_seen column to users table if it doesn't exist
+	// This is a migration for existing databases
+	_, err = db.Exec("ALTER TABLE users ADD COLUMN last_seen INTEGER DEFAULT 0")
+	if err != nil {
+		// Column might already exist, check if it's a "duplicate column" error
+		if !strings.Contains(err.Error(), "duplicate column") {
+			return nil, fmt.Errorf("error adding last_seen column: %w", err)
 		}
 		// Otherwise, column already exists, continue
 	}

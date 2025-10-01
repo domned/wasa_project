@@ -11,6 +11,9 @@
 			<div class="user-info">
 				<div class="user-name">
 					{{ username }}
+				</div>
+				<div class="user-status">Online</div>
+				<div class="user-profile-actions">
 					<button
 						class="edit-profile-btn"
 						@click="showEditProfile = true"
@@ -26,7 +29,6 @@
 						📷
 					</button>
 				</div>
-				<div class="user-status">Online</div>
 			</div>
 			<div class="user-actions">
 				<button
@@ -352,6 +354,12 @@ function getLastMessagePreview(text, imageUrl) {
 
 // Sort chats by last message time (newest first)
 function sortChatsByLastMessage(chats) {
+	// Handle null/undefined chats
+	if (!chats || !Array.isArray(chats)) {
+		console.warn('sortChatsByLastMessage received invalid chats:', chats);
+		return [];
+	}
+
 	return chats.sort((a, b) => {
 		const aTime = a.lastMessageTime ? parseInt(a.lastMessageTime) : 0;
 		const bTime = b.lastMessageTime ? parseInt(b.lastMessageTime) : 0;
@@ -468,8 +476,14 @@ async function fetchChats() {
 		const conversations = await api.conversations.getUserConversations(
 			props.userId
 		);
+
+		console.log('Fetched conversations:', conversations);
+
+		// Handle null or undefined response
+		const conversationsArray = conversations || [];
+
 		// Sort chats by last message time
-		const sortedChats = sortChatsByLastMessage(conversations);
+		const sortedChats = sortChatsByLastMessage(conversationsArray);
 		chats.value = sortedChats;
 		filteredChats.value = sortedChats; // Initialize filtered chats
 		// Emit chats to parent so App.vue can sync selectedChat
@@ -714,11 +728,10 @@ defineExpose({
 	flex: 1;
 }
 .user-actions {
-	position: absolute;
-	top: 16px;
-	right: 16px;
 	display: flex;
-	gap: 8px;
+	flex-direction: column;
+	gap: 4px;
+	align-items: center;
 }
 
 .admin-btn,
@@ -748,6 +761,12 @@ defineExpose({
 .user-name {
 	font-weight: bold;
 	color: var(--text-primary);
+}
+
+.user-profile-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 4px;
 }
 .user-status {
 	font-size: 12px;
@@ -947,10 +966,11 @@ defineExpose({
 	background: none;
 	border: none;
 	font-size: 14px;
-	margin-left: 8px;
 	cursor: pointer;
 	opacity: 0.7;
 	transition: opacity 0.2s;
+	padding: 2px 4px;
+	border-radius: 3px;
 }
 
 .edit-profile-btn:hover {

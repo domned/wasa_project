@@ -75,6 +75,12 @@ func (rt *_router) wrapAuth(fn httpRouterHandler) func(http.ResponseWriter, *htt
 			return
 		}
 
+		// Update user's last_seen timestamp for activity tracking
+		if err := rt.db.UpdateUserLastSeen(user.UId); err != nil {
+			// Log the error but don't fail the request
+			rt.baseLogger.WithError(err).Warn("Failed to update user last_seen timestamp")
+		}
+
 		// Create request context
 		reqUUID, err := uuid.NewV4()
 		if err != nil {

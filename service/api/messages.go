@@ -67,9 +67,24 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		messageId.String(), conversationId, userId, requestBody.Content, requestBody.ImageUrl)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("failed to save message to database")
+		rt.sysLogger.LogError("Failed to save message to database: " + err.Error())
 		http.Error(w, "Failed to save message", http.StatusInternalServerError)
 		return
 	}
+
+	// Log successful message send
+	rt.sysLogger.LogInfo("Message sent in conversation " + conversationId + " by user " + userId)
+
+	// Broadcast message to WebSocket clients
+	messageData := map[string]interface{}{
+		"id":             messageId.String(),
+		"conversation_id": conversationId,
+		"sender_id":      userId,
+		"content":        requestBody.Content,
+		"image_url":      requestBody.ImageUrl,
+	}
+	BroadcastMessage("message", messageData)
+	rt.sysLogger.LogDebug("Message broadcasted to WebSocket clients")
 
 	// Return success response with message ID
 	w.Header().Set("Content-Type", "application/json")

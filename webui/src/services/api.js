@@ -384,6 +384,95 @@ export const health = {
 		const response = await axios.get('/liveness');
 		return response.data;
 	},
+
+	/**
+	 * Get recent system logs
+	 * @returns {Promise<object>} Logs data
+	 */
+	async getLogs() {
+		try {
+			const response = await axios.get('/admin/logs');
+			return {
+				success: true,
+				data: response.data.logs || [],
+			};
+		} catch (error) {
+			console.error('Failed to get logs:', error);
+			return {
+				success: false,
+				error: error.response?.data?.message || 'Failed to get logs',
+				data: [],
+			};
+		}
+	},
+
+	/**
+	 * Get system health status
+	 * @returns {Promise<object>} Health status data
+	 */
+	async checkHealth() {
+		try {
+			const response = await axios.get('/admin/health');
+			return {
+				success: true,
+				data: response.data,
+			};
+		} catch (error) {
+			console.error('Failed to check health:', error);
+			return {
+				success: false,
+				error:
+					error.response?.data?.message || 'Failed to check health',
+				data: {
+					database: 'Error',
+					websocket: 'Error',
+					api: 'Error',
+					uptime: 'Unknown',
+				},
+			};
+		}
+	},
+
+	/**
+	 * Get system statistics
+	 * @returns {Promise<object>} System statistics
+	 */
+	async getStats() {
+		try {
+			const response = await axios.get('/admin/stats');
+			return {
+				success: true,
+				data: response.data,
+			};
+		} catch (error) {
+			console.error('Failed to get stats:', error);
+			return {
+				success: false,
+				error: error.response?.data?.message || 'Failed to get stats',
+				data: {
+					total_users: 0,
+					active_users: 0,
+					total_conversations: 0,
+					total_messages: 0,
+					active_connections: 0,
+				},
+			};
+		}
+	},
+
+	/**
+	 * Get currently online users
+	 * @returns {Promise<string[]>} List of online user IDs
+	 */
+	async getOnlineUsers() {
+		try {
+			const response = await axios.get('/admin/online-users');
+			return response.data;
+		} catch (error) {
+			console.error('Failed to get online users:', error);
+			return [];
+		}
+	},
 };
 
 // Default export with all services

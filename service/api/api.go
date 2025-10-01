@@ -38,10 +38,11 @@ package api
 
 import (
 	"errors"
+	"net/http"
+
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 // Config is used to provide dependencies and configuration to the New function.
@@ -78,11 +79,23 @@ func New(cfg Config) (Router, error) {
 	router.RedirectTrailingSlash = false
 	router.RedirectFixedPath = false
 
-	return &_router{
+	rt := &_router{
 		router:     router,
 		baseLogger: cfg.Logger,
 		db:         cfg.Database,
-	}, nil
+	}
+	
+	// Initialize system logger
+	rt.sysLogger = NewSystemLogger(rt)
+	
+	// Initialize WebSocket hub
+	InitializeHub(rt)
+	
+	// Log system startup
+	rt.sysLogger.LogInfo("API server initialized successfully")
+	rt.sysLogger.LogInfo("Database connection established")
+
+	return rt, nil
 }
 
 type _router struct {
@@ -92,5 +105,6 @@ type _router struct {
 	// Use context logger if available (e.g., in requests) instead of this logger.
 	baseLogger logrus.FieldLogger
 
-	db database.AppDatabase
+	db           database.AppDatabase
+	sysLogger    *SystemLogger
 }
