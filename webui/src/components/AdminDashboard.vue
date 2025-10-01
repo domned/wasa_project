@@ -273,14 +273,16 @@ async function loadActiveUsers() {
 	try {
 		const [users, onlineUserIDs] = await Promise.all([
 			apiService.users.listAll(),
-			apiService.health.getOnlineUsers()
+			apiService.health.getOnlineUsers(),
 		]);
-		
+
 		const onlineSet = new Set(onlineUserIDs);
-		
+
 		activeUsers.value = users.map((user) => ({
 			...user,
-			lastActive: user.last_seen ? new Date(user.last_seen * 1000).toISOString() : new Date().toISOString(),
+			lastActive: user.last_seen
+				? new Date(user.last_seen * 1000).toISOString()
+				: new Date().toISOString(),
 			online: onlineSet.has(user.id), // Check if user is in WebSocket connections
 		}));
 	} catch (err) {
@@ -637,8 +639,6 @@ function formatTime(dateString) {
 	text-align: center;
 	color: var(--text-muted);
 }
-
-
 
 /* Buttons */
 .btn {
