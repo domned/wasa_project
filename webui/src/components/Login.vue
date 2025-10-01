@@ -18,14 +18,22 @@
 					/>
 				</div>
 
-				<button
-					type="submit"
-					class="login-button"
-					:disabled="isLoading || username.length < 3"
-				>
-					<span v-if="isLoading">Logging in...</span>
-					<span v-else>Login</span>
-				</button>
+				<div style="background: red; padding: 20px; margin: 20px 0; border: 5px solid blue;">
+					<p style="color: white; font-size: 16px;">DEBUG: Button container</p>
+					<p style="color: white;">Username length: {{ username.length }}</p>
+					<p style="color: white;">Is loading: {{ isLoading }}</p>
+					<p style="color: white;">Button disabled: {{ isLoading || username.length < 3 }}</p>
+					
+					<button
+						type="submit"
+						class="login-button"
+						:disabled="isLoading || username.length < 3"
+						style="background: lime !important; color: black !important; padding: 20px !important; font-size: 20px !important; border: 3px solid red !important; display: block !important; width: 100% !important; margin: 10px 0 !important; position: relative !important; z-index: 9999 !important;"
+					>
+						<span v-if="isLoading">Logging in...</span>
+						<span v-else>LOGIN BUTTON</span>
+					</button>
+				</div>
 			</form>
 
 			<div v-if="error" class="error-message">
@@ -44,52 +52,72 @@
 	</div>
 </template>
 
-<script setup>
-import { ref } from 'vue';
-import axios from '../services/axios.js';
+<script>
+export default {
+	name: 'Login',
+	emits: ['login-success'],
+	data() {
+		console.log('Login.vue data() called');
+		return {
+			username: '',
+			isLoading: false,
+			error: ''
+		};
+	},
+	mounted() {
+		console.log('Login component mounted - v2.0');
+	},
+	methods: {
+		async handleLogin() {
+			console.log('handleLogin function called!');
+			if (this.username.length < 3 || this.username.length > 16) {
+				this.error = 'Username must be between 3 and 16 characters';
+				return;
+			}
 
-const emit = defineEmits(['login-success']);
+			this.isLoading = true;
+			this.error = '';
 
-const username = ref('');
-const isLoading = ref(false);
-const error = ref('');
+			try {
+				console.log('Attempting login with username:', this.username);
+				
+				// Make actual API call
+				const response = await fetch('/api/session', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ name: this.username })
+				});
 
-async function handleLogin() {
-	if (username.value.length < 3 || username.value.length > 16) {
-		error.value = 'Username must be between 3 and 16 characters';
-		return;
-	}
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
 
-	isLoading.value = true;
-	error.value = '';
+				const data = await response.json();
+				const userId = data.identifier;
+				console.log('Login successful, userId:', userId);
 
-	try {
-		const response = await axios.post('/session', {
-			name: username.value,
-		});
+				// Store user data in localStorage
+				localStorage.setItem('userId', userId);
+				localStorage.setItem('currentUsername', this.username);
+				console.log('Stored in localStorage. UserId:', userId, 'Username:', this.username);
 
-		const userId = response.data.identifier;
-
-		// Store user data in localStorage
-		localStorage.setItem('userId', userId);
-		localStorage.setItem('currentUsername', username.value);
-
-		// Emit success event with user data
-		emit('login-success', {
-			userId: userId,
-			username: username.value,
-		});
-	} catch (err) {
-		console.error('Login error:', err);
-		if (err.response && err.response.status === 400) {
-			error.value = 'Invalid username. Please use 3-16 characters.';
-		} else {
-			error.value = 'Login failed. Please try again.';
+				// Emit success event with user data
+				console.log('Emitting login-success with:', { userId, username: this.username });
+				this.$emit('login-success', {
+					userId: userId,
+					username: this.username,
+				});
+			} catch (err) {
+				console.error('Login error:', err);
+				this.error = 'Login failed. Please try again.';
+			} finally {
+				this.isLoading = false;
+			}
 		}
-	} finally {
-		isLoading.value = false;
 	}
-}
+};
 </script>
 
 <style scoped>
@@ -161,18 +189,21 @@ async function handleLogin() {
 
 .login-button {
 	padding: 0.75rem;
-	background: var(--color-primary);
-	color: white;
+	background: #007bff !important;
+	color: white !important;
 	border: none;
 	border-radius: 8px;
 	font-size: 1rem;
 	font-weight: 500;
 	cursor: pointer;
 	transition: all 0.2s ease;
+	display: block !important;
+	width: 100% !important;
+	margin: 1rem 0 !important;
 }
 
 .login-button:hover:not(:disabled) {
-	background: var(--color-primary-hover);
+	background: #0056b3 !important;
 	transform: translateY(-1px);
 }
 

@@ -1,6 +1,13 @@
 <template>
 	<div class="chat-view d-flex flex-column h-100">
-		<ChatHeader :chat="chat" />
+		<ChatHeader
+			:chat="chat"
+			@conversation-updated="handleConversationUpdate"
+		/>
+		<TypingIndicator
+			:conversationId="chat?.id"
+			:currentUserId="currentUserId"
+		/>
 		<div
 			class="messages flex-grow-1 overflow-auto px-3 py-2"
 			style="background: var(--bg-message)"
@@ -40,6 +47,8 @@
 					class="form-control"
 					placeholder="Type a message..."
 					@keyup.enter="send"
+					@input="handleInputChange"
+					@blur="stopTyping"
 					style="
 						background: var(--bg-message);
 						color: var(--text-primary);
@@ -74,18 +83,59 @@
 import { ref } from 'vue';
 import ChatHeader from './ChatHeader.vue';
 import MessageBubble from './MessageBubble.vue';
-import axios from '../services/axios.js';
+import TypingIndicator from './TypingIndicator.vue';
+import { apiService } from '../services/api.js';
+import webSocketService from '../services/websocket.js';
 
 const props = defineProps({
 	chat: Object,
 	messages: Array,
 });
 
-const emit = defineEmits(['message-sent']);
+const emit = defineEmits(['message-sent', 'conversation-updated']);
 
 const input = ref('');
 const selectedImage = ref(null);
 const fileInput = ref(null);
+const currentUserId = localStorage.getItem('userId');
+const isTyping = ref(false);
+let typingTimeout = null;
+
+function handleConversationUpdate(updatedChat) {
+	emit('conversation-updated', updatedChat);
+}
+
+function handleInputChange() {
+	if (!props.chat?.id) return;
+
+	// Send typing start if not already typing
+	if (!isTyping.value) {
+		isTyping.value = true;
+		webSocketService.sendTypingIndicator(props.chat.id, true);
+	}
+
+	// Clear existing timeout
+	if (typingTimeout) {
+		clearTimeout(typingTimeout);
+	}
+
+	// Set timeout to stop typing after 2 seconds of inactivity
+	typingTimeout = setTimeout(() => {
+		isTyping.value = false;
+		webSocketService.sendTypingIndicator(props.chat.id, false);
+	}, 2000);
+}
+
+function stopTyping() {
+	if (isTyping.value && props.chat?.id) {
+		isTyping.value = false;
+		webSocketService.sendTypingIndicator(props.chat.id, false);
+	}
+	if (typingTimeout) {
+		clearTimeout(typingTimeout);
+		typingTimeout = null;
+	}
+}
 
 // Convert file to base64 data URL with compression
 function fileToDataURL(file, maxWidth = 800, quality = 0.8) {
@@ -143,16 +193,16 @@ async function send() {
 	const messageContent = input.value.trim();
 	const userId = localStorage.getItem('userId');
 
-	try {
-		let response;
+	// Stop typing indicator before sending
+	stopTyping();
 
+	try {
 		// Send message (with or without image)
-		response = await axios.post(
-			`/users/${userId}/conversations/${props.chat.id}/messages`,
-			{
-				content: messageContent,
-				imageUrl: selectedImage.value || undefined,
-			}
+		const messageId = await apiService.messages.send(
+			userId,
+			props.chat.id,
+			messageContent,
+			selectedImage.value || undefined
 		);
 
 		// Clear input and image after successful send
@@ -161,7 +211,7 @@ async function send() {
 
 		// Emit event to parent to refresh messages
 		emit('message-sent', {
-			messageId: response.data,
+			messageId: messageId,
 			content: messageContent,
 			imageUrl: selectedImage.value,
 			chatId: props.chat.id,

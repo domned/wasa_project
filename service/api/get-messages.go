@@ -14,31 +14,19 @@ func (rt *_router) getMessages(w http.ResponseWriter, r *http.Request, ps httpro
 	db := rt.db
 	sqldb := db.GetRawDB()
 
-	// Get messages
-	rows, err := sqldb.Query(`
-		SELECT m.id, m.sender_id, m.message, COALESCE(m.image_url, '') as image_url, u.username 
-		FROM messages m 
-		JOIN users u ON m.sender_id = u.id 
-		WHERE m.conversation_id = ? 
-		ORDER BY m.rowid ASC`, convId)
+	// Get messages using database interface
+	dbMessages, err := db.GetConversationMessages(convId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
 
 	var messages []map[string]interface{}
 	var messageIds []string
-	for rows.Next() {
-		var id, senderId, message, imageUrl, senderUsername string
-		if err := rows.Scan(&id, &senderId, &message, &imageUrl, &senderUsername); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
+	for _, msg := range dbMessages {
 		// Collect message IDs for marking as read
-		if senderId != userId {
-			messageIds = append(messageIds, id)
+		if msg.SenderId != userId {
+			messageIds = append(messageIds, msg.Id)
 		}
 
 		// Get reactions for this message
@@ -47,7 +35,7 @@ func (rt *_router) getMessages(w http.ResponseWriter, r *http.Request, ps httpro
 	       	FROM reactions r
 	       	JOIN users u ON r.sender_id = u.id
 	       	WHERE r.message_id = ?
-	       	GROUP BY emoji`, id)
+	       	GROUP BY emoji`, msg.Id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -68,19 +56,24 @@ func (rt *_router) getMessages(w http.ResponseWriter, r *http.Request, ps httpro
 				"users": usernames,
 			}
 		}
+		if err = reactionRows.Err(); err != nil {
+			reactionRows.Close()
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		reactionRows.Close()
 
 		// Check read status for this message
 		var isMessageRead bool
 
-		if senderId == userId {
+		if msg.SenderId == userId {
 			// For messages sent by current user: check if any other participant has read it
 			var readCount int
 			err = sqldb.QueryRow(`
 	       		SELECT COUNT(*) 
 	       		FROM read_status 
 	       		WHERE message_id = ? AND user_id != ?`,
-				id, userId).Scan(&readCount)
+				msg.Id, userId).Scan(&readCount)
 			if err != nil {
 				readCount = 0
 			}
@@ -92,19 +85,15 @@ func (rt *_router) getMessages(w http.ResponseWriter, r *http.Request, ps httpro
 		}
 
 		messages = append(messages, map[string]interface{}{
-			"id":             id,
-			"senderId":       senderId,
-			"text":           message,
-			"imageUrl":       imageUrl,
-			"senderUsername": senderUsername,
+			"id":             msg.Id,
+			"senderId":       msg.SenderId,
+			"text":           msg.Text,
+			"imageUrl":       msg.ImageUrl,
+			"senderUsername": msg.SenderUsername,
+			"time":           msg.Time,
 			"reactions":      reactions,
 			"isRead":         isMessageRead,
 		})
-	}
-
-	if err = rows.Err(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 
 	// Mark all unread messages as read

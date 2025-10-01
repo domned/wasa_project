@@ -109,6 +109,69 @@
 					</button>
 				</div>
 			</div>
+
+			<!-- Comments section -->
+			<div class="comments-section mt-2">
+				<!-- Comments toggle button -->
+				<button
+					class="btn btn-sm btn-link comments-toggle"
+					@click="toggleComments"
+					:title="showComments ? 'Hide comments' : 'Show comments'"
+				>
+					💬 {{ commentCount }}
+					{{ commentCount === 1 ? 'comment' : 'comments' }}
+				</button>
+
+				<!-- Comments list -->
+				<div v-if="showComments" class="comments-list mt-2">
+					<div
+						v-for="comment in comments"
+						:key="comment.id"
+						class="comment-item"
+					>
+						<div class="comment-header">
+							<span class="comment-author">{{
+								comment.author.username
+							}}</span>
+							<span class="comment-time">{{
+								formatTime(comment.timestamp)
+							}}</span>
+							<button
+								v-if="canDeleteComment(comment)"
+								class="btn btn-sm btn-link comment-delete"
+								@click="deleteComment(comment.id)"
+								title="Delete comment"
+							>
+								✕
+							</button>
+						</div>
+						<div class="comment-text">{{ comment.text }}</div>
+					</div>
+
+					<!-- Add comment form -->
+					<div class="add-comment-form mt-2">
+						<div class="comment-input-group">
+							<input
+								v-model="newCommentText"
+								type="text"
+								class="form-control form-control-sm"
+								placeholder="Add a comment..."
+								@keyup.enter="addComment"
+								maxlength="500"
+							/>
+							<button
+								class="btn btn-sm btn-primary"
+								@click="addComment"
+								:disabled="
+									!newCommentText.trim() || isAddingComment
+								"
+							>
+								{{ isAddingComment ? 'Adding...' : 'Send' }}
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 
@@ -130,8 +193,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import axios from '../services/axios.js';
+import { ref, computed } from 'vue';
+import { apiService } from '../services/api.js';
 
 const props = defineProps({
 	msg: Object,
@@ -143,6 +206,11 @@ const emit = defineEmits(['reaction-changed', 'message-deleted']);
 
 const showReactionPicker = ref(false);
 const showImageModal = ref(false);
+const showComments = ref(false);
+const comments = ref([]);
+const newCommentText = ref('');
+const isAddingComment = ref(false);
+const currentUserId = localStorage.getItem('userId');
 
 function openImageModal() {
 	showImageModal.value = true;
@@ -223,9 +291,11 @@ async function toggleReaction(emoji) {
 async function addReaction(emoji) {
 	try {
 		const userId = localStorage.getItem('userId');
-		await axios.post(
-			`/users/${userId}/conversations/${props.chat.id}/messages/${props.msg.id}/reaction`,
-			{ emoji: emoji }
+		await apiService.reactions.toggle(
+			userId,
+			props.chat.id,
+			props.msg.id,
+			emoji
 		);
 
 		showReactionPicker.value = false;
@@ -239,8 +309,11 @@ async function addReaction(emoji) {
 async function removeReaction(emoji) {
 	try {
 		const userId = localStorage.getItem('userId');
-		await axios.delete(
-			`/users/${userId}/conversations/${props.chat.id}/messages/${props.msg.id}/reaction/${emoji}`
+		await apiService.reactions.remove(
+			userId,
+			props.chat.id,
+			props.msg.id,
+			emoji
 		);
 
 		emit('reaction-changed');
@@ -257,9 +330,7 @@ async function deleteMessage() {
 
 	try {
 		const userId = localStorage.getItem('userId');
-		await axios.delete(
-			`/users/${userId}/conversations/${props.chat.id}/messages/${props.msg.id}`
-		);
+		await apiService.messages.delete(userId, props.chat.id, props.msg.id);
 
 		emit('message-deleted', props.msg.id);
 	} catch (error) {
@@ -275,8 +346,8 @@ async function forwardMessage() {
 	try {
 		// Get user's conversations to show a selection dialog
 		const userId = localStorage.getItem('userId');
-		const response = await axios.get(`/users/${userId}/conversations`);
-		const conversations = response.data || [];
+		const conversations =
+			await apiService.conversations.getUserConversations(userId);
 
 		// Filter out current conversation
 		const otherConversations = conversations.filter(
@@ -311,9 +382,11 @@ async function forwardMessage() {
 
 		const targetConversation = otherConversations[selectedIndex];
 
-		await axios.post(
-			`/users/${userId}/conversations/${props.chat.id}/messages/${props.msg.id}/forward`,
-			{ content: targetConversation.id }
+		await apiService.messages.forward(
+			userId,
+			props.chat.id,
+			props.msg.id,
+			targetConversation.id
 		);
 
 		alert(
@@ -354,6 +427,77 @@ function getConversationDisplayName(conversation) {
 	}
 
 	return 'Unknown Conversation';
+}
+
+// Comment-related computed properties
+const commentCount = computed(() => {
+	return comments.value.length;
+});
+
+// Comment-related methods
+async function toggleComments() {
+	showComments.value = !showComments.value;
+	if (showComments.value && comments.value.length === 0) {
+		await loadComments();
+	}
+}
+
+async function loadComments() {
+	try {
+		const response = await apiService.comments.getMessageComments(
+			props.msg.id
+		);
+		if (response.success) {
+			comments.value = response.data;
+		}
+	} catch (error) {
+		console.error('Failed to load comments:', error);
+	}
+}
+
+async function addComment() {
+	if (!newCommentText.value.trim()) return;
+
+	isAddingComment.value = true;
+
+	try {
+		const response = await apiService.comments.addComment(
+			props.msg.id,
+			newCommentText.value.trim()
+		);
+
+		if (response.success) {
+			comments.value.push(response.data);
+			newCommentText.value = '';
+		}
+	} catch (error) {
+		console.error('Failed to add comment:', error);
+	} finally {
+		isAddingComment.value = false;
+	}
+}
+
+async function deleteComment(commentId) {
+	if (!confirm('Delete this comment?')) return;
+
+	try {
+		const response = await apiService.comments.deleteComment(commentId);
+		if (response.success) {
+			comments.value = comments.value.filter((c) => c.id !== commentId);
+		}
+	} catch (error) {
+		console.error('Failed to delete comment:', error);
+	}
+}
+
+function canDeleteComment(comment) {
+	return comment.author.id === currentUserId;
+}
+
+function formatTime(timestamp) {
+	if (!timestamp) return '';
+	const date = new Date(timestamp);
+	return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 </script>
 
@@ -544,5 +688,93 @@ function getConversationDisplayName(conversation) {
 
 .close-modal-btn:hover {
 	background: rgba(0, 0, 0, 0.9);
+}
+
+/* Comments Section */
+.comments-section {
+	margin-left: 8px;
+	border-left: 2px solid var(--border-color);
+	padding-left: 8px;
+}
+
+.comments-toggle {
+	color: var(--text-muted);
+	text-decoration: none;
+	font-size: 0.75rem;
+	padding: 0.25rem 0;
+}
+
+.comments-toggle:hover {
+	color: var(--text-primary);
+	background: transparent;
+}
+
+.comments-list {
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.comment-item {
+	background: var(--bg-message);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	padding: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.comment-header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.25rem;
+}
+
+.comment-author {
+	font-weight: 600;
+	font-size: 0.75rem;
+	color: var(--text-primary);
+}
+
+.comment-time {
+	font-size: 0.625rem;
+	color: var(--text-muted);
+}
+
+.comment-delete {
+	margin-left: auto;
+	padding: 0;
+	color: var(--text-muted);
+	font-size: 0.75rem;
+}
+
+.comment-delete:hover {
+	color: var(--danger);
+	background: transparent;
+}
+
+.comment-text {
+	font-size: 0.8rem;
+	color: var(--text-primary);
+	word-break: break-word;
+}
+
+.add-comment-form {
+	border-top: 1px solid var(--border-color);
+	padding-top: 0.5rem;
+}
+
+.comment-input-group {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.comment-input-group .form-control {
+	flex: 1;
+	font-size: 0.75rem;
+}
+
+.comment-input-group .btn {
+	font-size: 0.75rem;
+	padding: 0.25rem 0.75rem;
 }
 </style>

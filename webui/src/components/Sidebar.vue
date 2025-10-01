@@ -18,10 +18,24 @@
 					>
 						✏️
 					</button>
+					<button
+						class="edit-profile-btn"
+						@click="showPhotoUpload = true"
+						title="Update Photo"
+					>
+						📷
+					</button>
 				</div>
 				<div class="user-status">Online</div>
 			</div>
 			<div class="user-actions">
+				<button
+					class="admin-btn"
+					@click="$emit('show-admin')"
+					title="Admin Dashboard"
+				>
+					⚙️
+				</button>
 				<button
 					class="theme-toggle-btn"
 					@click="toggleTheme"
@@ -38,7 +52,26 @@
 				</button>
 			</div>
 		</div>
-		<div class="sidebar-search">
+
+		<!-- Tabs -->
+		<div class="sidebar-tabs">
+			<button
+				class="tab-btn"
+				:class="{ active: activeTab === 'chats' }"
+				@click="activeTab = 'chats'"
+			>
+				💬 Chats
+			</button>
+			<button
+				class="tab-btn"
+				:class="{ active: activeTab === 'contacts' }"
+				@click="activeTab = 'contacts'"
+			>
+				📞 Contacts
+			</button>
+		</div>
+
+		<div v-if="activeTab === 'chats'" class="sidebar-search">
 			<input
 				type="text"
 				placeholder="Search or start new chat"
@@ -55,7 +88,9 @@
 				+ New Chat or Group
 			</button>
 		</div>
-		<div class="sidebar-chats">
+
+		<!-- Chats Tab Content -->
+		<div v-if="activeTab === 'chats'" class="sidebar-chats">
 			<div v-if="loading" class="sidebar-loading">Loading chats...</div>
 			<div v-else-if="error" class="sidebar-error">{{ error }}</div>
 			<div
@@ -65,7 +100,7 @@
 				No chats match your search.
 			</div>
 			<div v-else-if="filteredChats.length === 0" class="sidebar-empty">
-				No conversations
+				No chats found.
 			</div>
 			<div
 				v-else
@@ -116,6 +151,14 @@
 					</div>
 				</div>
 			</div>
+		</div>
+
+		<!-- Contacts Tab Content -->
+		<div v-if="activeTab === 'contacts'" class="sidebar-contacts">
+			<Contacts
+				:userId="userId"
+				@conversation-created="handleContactConversationCreated"
+			/>
 		</div>
 	</div>
 
@@ -169,11 +212,66 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Photo Upload Modal -->
+	<div
+		v-if="showPhotoUpload"
+		class="modal-overlay"
+		@click="showPhotoUpload = false"
+	>
+		<div class="edit-profile-modal" @click.stop>
+			<div class="modal-header">
+				<h3>Update Profile Photo</h3>
+				<button class="close-btn" @click="cancelPhotoUpload">×</button>
+			</div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label for="photoInput">Select Photo</label>
+					<input
+						id="photoInput"
+						type="file"
+						accept="image/*"
+						class="form-control"
+						@change="handlePhotoSelect"
+					/>
+					<small class="form-text text-muted">
+						JPG, PNG, GIF supported. Max 5MB.
+					</small>
+				</div>
+
+				<!-- Photo Preview -->
+				<div v-if="selectedPhoto" class="photo-preview">
+					<img
+						:src="selectedPhoto"
+						alt="Preview"
+						class="preview-img"
+					/>
+				</div>
+
+				<div v-if="photoError" class="alert alert-danger">
+					{{ photoError }}
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-secondary" @click="cancelPhotoUpload">
+					Cancel
+				</button>
+				<button
+					class="btn btn-primary"
+					@click="uploadPhoto"
+					:disabled="isUploadingPhoto || !selectedPhoto"
+				>
+					{{ isUploadingPhoto ? 'Uploading...' : 'Save Photo' }}
+				</button>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import axios from '../services/axios.js';
+import { ref, computed, onMounted, watch } from 'vue';
+import api from '../services/api.js';
+import Contacts from './Contacts.vue';
 // Returns the avatar for a chat: for 1:1 chats, show the other participant's picture; for groups, show the chat picture
 function getChatAvatar(chat) {
 	const defaultAvatar =
@@ -254,9 +352,6 @@ function getLastMessagePreview(text, imageUrl) {
 
 // Sort chats by last message time (newest first)
 function sortChatsByLastMessage(chats) {
-	if (!Array.isArray(chats)) {
-		return [];
-	}
 	return chats.sort((a, b) => {
 		const aTime = a.lastMessageTime ? parseInt(a.lastMessageTime) : 0;
 		const bTime = b.lastMessageTime ? parseInt(b.lastMessageTime) : 0;
@@ -325,6 +420,8 @@ const emit = defineEmits([
 	'chat-deleted',
 	'logout',
 	'username-updated',
+	'photo-updated',
+	'show-admin',
 ]);
 const props = defineProps({
 	userId: {
@@ -352,22 +449,27 @@ const searchQuery = ref('');
 const loading = ref(false);
 const error = ref(null);
 const isDarkTheme = ref(localStorage.getItem('darkTheme') === 'true');
+const activeTab = ref('chats');
 
 // Profile editing variables
 const showEditProfile = ref(false);
 const newUsername = ref('');
 const isUpdating = ref(false);
 const editError = ref('');
+const showPhotoUpload = ref(false);
+const selectedPhoto = ref(null);
+const isUploadingPhoto = ref(false);
+const photoError = ref('');
 
 async function fetchChats() {
 	loading.value = true;
 	error.value = null;
 	try {
-		const res = await axios.get(`/users/${props.userId}/conversations`);
-		// Handle null or empty response
-		const chatData = res.data || [];
+		const conversations = await api.conversations.getUserConversations(
+			props.userId
+		);
 		// Sort chats by last message time
-		const sortedChats = sortChatsByLastMessage(chatData);
+		const sortedChats = sortChatsByLastMessage(conversations);
 		chats.value = sortedChats;
 		filteredChats.value = sortedChats; // Initialize filtered chats
 		// Emit chats to parent so App.vue can sync selectedChat
@@ -422,13 +524,11 @@ async function deleteChat(chat) {
 	}
 
 	try {
-		// Use the correct leave group endpoint
-		const deleteUrl = `/users/${props.userId}/conversations/${chat.id}/members`;
-		console.log('Attempting to delete conversation with URL:', deleteUrl);
+		console.log('Attempting to leave conversation');
 		console.log('User ID:', props.userId);
 		console.log('Chat ID:', chat.id);
 
-		await axios.delete(deleteUrl);
+		await api.conversations.leaveGroup(props.userId, chat.id);
 
 		console.log('Successfully deleted conversation');
 
@@ -497,18 +597,10 @@ async function updateUsername() {
 	editError.value = '';
 
 	try {
-		const response = await axios.put(
-			`/users/${props.userId}`,
-			newUsername.value,
-			{
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			}
-		);
+		await api.users.updateUsername(props.userId, newUsername.value);
 
 		// Emit event to update username in parent component
-		emit('username-updated', response.data.username);
+		emit('username-updated', newUsername.value);
 
 		// Update localStorage
 		localStorage.setItem('currentUsername', response.data.username);
@@ -532,6 +624,68 @@ onMounted(() => {
 	applyTheme(); // Apply theme on component mount
 });
 watch(() => props.userId, fetchChats);
+
+// Photo upload functions
+function handlePhotoSelect(event) {
+	const file = event.target.files[0];
+	if (file && file.type.startsWith('image/')) {
+		// Convert to data URL for upload
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			selectedPhoto.value = e.target.result;
+		};
+		reader.readAsDataURL(file);
+	}
+}
+
+async function uploadPhoto() {
+	if (!selectedPhoto.value) {
+		photoError.value = 'Please select a photo first';
+		return;
+	}
+
+	isUploadingPhoto.value = true;
+	photoError.value = '';
+
+	try {
+		await api.users.updatePhoto(props.userId, selectedPhoto.value);
+
+		// Update local state
+		emit('photo-updated', selectedPhoto.value);
+
+		showPhotoUpload.value = false;
+		selectedPhoto.value = null;
+
+		// Reset file input
+		const fileInput = document.getElementById('photoInput');
+		if (fileInput) fileInput.value = '';
+	} catch (error) {
+		console.error('Failed to upload photo:', error);
+		photoError.value = 'Failed to upload photo. Please try again.';
+	} finally {
+		isUploadingPhoto.value = false;
+	}
+}
+
+function cancelPhotoUpload() {
+	showPhotoUpload.value = false;
+	selectedPhoto.value = null;
+	photoError.value = '';
+
+	// Reset file input
+	const fileInput = document.getElementById('photoInput');
+	if (fileInput) fileInput.value = '';
+}
+
+// Handle conversation created from contacts
+function handleContactConversationCreated(conversation) {
+	// Refresh chats to include the new conversation
+	fetchChats();
+	// Switch to chats tab and select the new conversation
+	activeTab.value = 'chats';
+	// Emit to parent to select the conversation
+	emit('select-chat', conversation.id);
+}
 
 // Expose methods for parent component
 defineExpose({
@@ -567,6 +721,7 @@ defineExpose({
 	gap: 8px;
 }
 
+.admin-btn,
 .theme-toggle-btn,
 .logout-btn {
 	background: none;
@@ -578,6 +733,7 @@ defineExpose({
 	transition: background-color 0.2s;
 }
 
+.admin-btn:hover,
 .theme-toggle-btn:hover,
 .logout-btn:hover {
 	background-color: var(--hover-bg);
@@ -597,8 +753,41 @@ defineExpose({
 	font-size: 12px;
 	color: var(--text-muted);
 }
+.sidebar-tabs {
+	display: flex;
+	padding: 0 16px;
+	margin-bottom: 8px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+	flex: 1;
+	padding: 8px 12px;
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	border-bottom: 2px solid transparent;
+	transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+	color: var(--text-primary);
+	border-bottom-color: var(--success-bg);
+}
+
+.tab-btn:hover {
+	color: var(--text-primary);
+	background: var(--hover-bg);
+}
+
 .sidebar-search {
 	padding: 0 16px 16px 16px;
+}
+
+.sidebar-contacts {
+	flex: 1;
+	overflow: hidden;
 }
 .sidebar-search input {
 	width: 100%;
@@ -880,6 +1069,18 @@ defineExpose({
 	background-color: #f8d7da;
 	border: 1px solid #f5c6cb;
 	color: #721c24;
+}
+
+.photo-preview {
+	margin-top: 12px;
+	text-align: center;
+}
+
+.preview-img {
+	max-width: 200px;
+	max-height: 200px;
+	border-radius: 8px;
+	border: 2px solid var(--border-color);
 }
 
 /* Dark theme adjustments */

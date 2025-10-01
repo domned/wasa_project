@@ -17,11 +17,31 @@ info:
         - User profiles with photos
     version: '1.2.0'
 
+tags:
+    - name: Authentication
+      description: User authentication and session management
+    - name: Users
+      description: User profile management and operations
+    - name: Conversations
+      description: Group and conversation management
+    - name: Messages
+      description: Message sending, forwarding, and management
+    - name: Reactions
+      description: Message reactions and emoji management
+    - name: Comments
+      description: Message comments management
+    - name: Contacts
+      description: User contact management
+    - name: WebSocket
+      description: Real-time messaging WebSocket connection
+    - name: Health
+      description: Service health monitoring
+
 security:
     - bearerAuth: []
 
-# Note: All authenticated endpoints (those requiring bearerAuth) will return 
-# a 401 Unauthorized response if authentication fails. See the UnauthorizedError 
+# Note: All authenticated endpoints (those requiring bearerAuth) will return
+# a 401 Unauthorized response if authentication fails. See the UnauthorizedError
 # response definition in components for details.
 
 components:
@@ -37,11 +57,15 @@ components:
     schemas:
         User:
             type: object
+            description: Represents a user in the chat application
             properties:
                 id:
                     type: string
                     example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
                     description: UUID of the user
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 username:
                     type: string
                     example: 'Alice'
@@ -52,36 +76,52 @@ components:
                     type: string
                     example: 'https://example.com/avatar.jpg'
                     description: URL to user's profile picture
+                    pattern: '^https?://.*'
+                    minLength: 10
+                    maxLength: 2048
             required:
                 - id
                 - username
 
         Conversation:
             type: object
+            description: Represents a conversation/group chat between multiple users
             properties:
                 id:
                     type: string
                     example: 'c0c0c0c0-0000-0000-0000-000000000001'
                     description: UUID of the conversation
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 name:
                     type: string
                     example: 'Group Chat'
                     description: Name of the conversation (empty for 1:1 chats)
+                    pattern: '^.*$'
+                    minLength: 0
+                    maxLength: 100
                 picture:
                     type: string
                     example: 'https://example.com/group-avatar.jpg'
                     description: URL to conversation's picture
+                    pattern: '^https?://.*'
+                    minLength: 10
+                    maxLength: 2048
                 participants:
                     type: array
                     items:
                         $ref: '#/components/schemas/User'
                     description: List of users in the conversation
+                    minItems: 1
+                    maxItems: 100
             required:
                 - id
                 - participants
 
         Message:
             type: object
+            description: Represents a message in a conversation with text, images, reactions, and metadata
             properties:
                 id:
                     type: string
@@ -120,15 +160,19 @@ components:
                                 items:
                                     type: string
                                 example: ['Alice', 'Bob']
+                                minItems: 1
+                                maxItems: 50
                     description: >-
                         Reactions to the message (emoji -> reaction data)
             required:
                 - id
                 - senderId
                 - senderUsername
+                - time
 
         Reaction:
             type: object
+            description: Represents an emoji reaction to toggle on a message
             properties:
                 emoji:
                     type: string
@@ -139,6 +183,7 @@ components:
 
         Comment:
             type: object
+            description: Represents a comment on a specific message
             properties:
                 id:
                     type: string
@@ -164,6 +209,7 @@ components:
 
         Contact:
             type: object
+            description: Represents a contact relationship between two users
             properties:
                 id:
                     type: string
@@ -189,6 +235,7 @@ components:
 
         LoginRequest:
             type: object
+            description: Request payload for user login/registration
             properties:
                 name:
                     type: string
@@ -201,6 +248,7 @@ components:
 
         LoginResponse:
             type: object
+            description: Response payload containing user identifier after successful login
             properties:
                 identifier:
                     type: string
@@ -211,6 +259,7 @@ components:
 
         SendMessageRequest:
             type: object
+            description: Request payload for sending a message (text and/or image)
             properties:
                 content:
                     type: string
@@ -226,6 +275,7 @@ components:
 
         CreateConversationRequest:
             type: object
+            description: Request payload for creating a new conversation/group chat
             properties:
                 participants:
                     type: array
@@ -234,6 +284,8 @@ components:
                     example: ['user-uuid-1', 'user-uuid-2']
                     description: >-
                         List of user UUIDs to include in the conversation
+                    minItems: 1
+                    maxItems: 100
                 name:
                     type: string
                     example: 'Project Discussion'
@@ -244,6 +296,7 @@ components:
 
         ForwardMessageRequest:
             type: object
+            description: Request payload for forwarding a message to another conversation
             properties:
                 content:
                     type: string
@@ -254,6 +307,7 @@ components:
 
         AddContactRequest:
             type: object
+            description: Request payload for adding a new contact
             properties:
                 contactUserId:
                     type: string
@@ -264,6 +318,7 @@ components:
 
         CommentRequest:
             type: object
+            description: Request payload for adding a comment to a message
             properties:
                 content:
                     type: string
@@ -272,8 +327,23 @@ components:
             required:
                 - content
 
+        UpdateUsernameRequest:
+            type: object
+            description: Request payload for updating a user's username
+            properties:
+                username:
+                    type: string
+                    minLength: 3
+                    maxLength: 16
+                    pattern: '^[a-zA-Z0-9_]+$'
+                    example: 'Alice'
+                    description: New username for the user
+            required:
+                - username
+
         Error:
             type: object
+            description: Standard error response containing error message
             properties:
                 message:
                     type: string
@@ -283,6 +353,17 @@ components:
                 - message
 
     responses:
+        SuccessMessage:
+            description: Operation completed successfully
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            message:
+                                type: string
+                                example: 'Operation completed successfully'
+
         UnauthorizedError:
             description: Authentication information is missing or invalid
             content:
@@ -293,7 +374,7 @@ components:
                         missing_header:
                             summary: Missing Authorization header
                             value:
-                                message: "Authorization header required"
+                                message: 'Authorization header required'
                         invalid_format:
                             summary: Invalid authorization format
                             value:
@@ -301,13 +382,41 @@ components:
                         invalid_token:
                             summary: Invalid token format
                             value:
-                                message: "Invalid token format"
+                                message: 'Invalid token format'
                         user_not_found:
                             summary: User not found
                             value:
-                                message: "Invalid token - user not found"
+                                message: 'Invalid token - user not found'
 
 paths:
+    /:
+        get:
+            tags: ['Health']
+            summary: API root endpoint
+            description: Returns basic API information and status
+            operationId: getApiRoot
+            responses:
+                '200':
+                    description: API information
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    name:
+                                        type: string
+                                        example: 'WASAText API'
+                                    version:
+                                        type: string
+                                        example: '1.2.0'
+                                    status:
+                                        type: string
+                                        example: 'running'
+                                    endpoints:
+                                        type: integer
+                                        example: 26
+                                        description: Number of available API endpoints
+
     /session:
         post:
             tags: ['Authentication']
@@ -353,6 +462,8 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/User'
+                                minItems: 0
+                                maxItems: 10000
                 '401':
                     $ref: '#/components/responses/UnauthorizedError'
                 '500':
@@ -377,18 +488,15 @@ paths:
             description: Set or update the user's username
             operationId: setMyUserName
             requestBody:
-                description: New username as a JSON string
+                description: New username for the user
                 content:
                     application/json:
                         schema:
-                            type: string
-                            minLength: 3
-                            maxLength: 16
-                            example: 'Alice'
+                            $ref: '#/components/schemas/UpdateUsernameRequest'
                 required: true
             responses:
                 '200':
-                    description: Username updated successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '400':
                     description: Invalid username format
                     content:
@@ -428,7 +536,7 @@ paths:
                 required: true
             responses:
                 '200':
-                    description: Photo updated successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '400':
                     description: Invalid photo URL
                     content:
@@ -493,6 +601,8 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/Conversation'
+                                minItems: 0
+                                maxItems: 1000
                 '404':
                     description: User not found
                     content:
@@ -603,7 +713,7 @@ paths:
                 required: true
             responses:
                 '200':
-                    description: Member added successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '400':
                     description: Invalid request data
                     content:
@@ -623,7 +733,7 @@ paths:
             operationId: leaveGroup
             responses:
                 '200':
-                    description: Successfully left the group
+                    $ref: '#/components/responses/SuccessMessage'
                 '404':
                     description: Conversation not found
                     content:
@@ -662,7 +772,7 @@ paths:
                 required: true
             responses:
                 '200':
-                    description: Group name updated successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '400':
                     description: Invalid group name
                     content:
@@ -707,7 +817,7 @@ paths:
                 required: true
             responses:
                 '200':
-                    description: Group photo updated successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '400':
                     description: Invalid photo URL
                     content:
@@ -751,6 +861,8 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/Message'
+                                minItems: 0
+                                maxItems: 1000
                 '404':
                     description: Conversation not found
                     content:
@@ -820,7 +932,7 @@ paths:
             operationId: deleteMessage
             responses:
                 '200':
-                    description: Message deleted successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '403':
                     description: Not authorized to delete this message
                     content:
@@ -926,7 +1038,7 @@ paths:
                 required: true
             responses:
                 '200':
-                    description: Reaction toggled successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '400':
                     description: Invalid reaction data
                     content:
@@ -976,7 +1088,7 @@ paths:
             operationId: removeReaction
             responses:
                 '200':
-                    description: Reaction removed successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '404':
                     description: Message or reaction not found
                     content:
@@ -1076,7 +1188,7 @@ paths:
             operationId: deleteComment
             responses:
                 '200':
-                    description: Comment deleted successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '403':
                     description: Not authorized to delete this comment
                     content:
@@ -1113,6 +1225,8 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/Contact'
+                                minItems: 0
+                                maxItems: 1000
                 '404':
                     description: User not found
                     content:
@@ -1174,7 +1288,7 @@ paths:
             operationId: removeContact
             responses:
                 '200':
-                    description: Contact removed successfully
+                    $ref: '#/components/responses/SuccessMessage'
                 '404':
                     description: Contact not found
                     content:
@@ -1199,6 +1313,8 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/Conversation'
+                                minItems: 0
+                                maxItems: 10000
                 '500':
                     description: Internal server error
                     content:

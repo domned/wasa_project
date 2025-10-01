@@ -139,7 +139,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from '../services/axios.js';
+import api from '../services/api.js';
 
 const emit = defineEmits(['conversation-created']);
 
@@ -151,10 +151,10 @@ const isCreating = ref(false);
 
 const loadUsers = async () => {
 	try {
-		const response = await axios.get('/users');
+		const users = await api.users.listAll();
 		const currentUserId = localStorage.getItem('userId');
 		// Filter out current user from available users
-		availableUsers.value = response.data.filter(
+		availableUsers.value = users.filter(
 			(user) => user.id !== currentUserId
 		);
 	} catch (error) {
@@ -205,12 +205,13 @@ const createConversation = async () => {
 
 		console.log('Creating conversation with data:', requestData);
 
-		const response = await axios.post(
-			`/users/${userId}/conversations`,
-			requestData
+		const conversation = await api.conversations.create(
+			userId,
+			participantIds,
+			conversationName.value || undefined
 		);
 
-		console.log('Conversation created successfully:', response.data);
+		console.log('Conversation created successfully:', conversation);
 
 		// Close modal properly
 		const modal = document.getElementById('createConversationModal');
@@ -241,7 +242,7 @@ const createConversation = async () => {
 		selectedUser.value = '';
 
 		// Emit event to parent
-		emit('conversation-created', response.data);
+		emit('conversation-created', conversation);
 	} catch (error) {
 		console.error('Failed to create conversation:', error);
 		alert('Failed to create conversation. Please try again.');

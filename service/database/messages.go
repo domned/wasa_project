@@ -93,7 +93,7 @@ func (db *appdbimpl) ForwardMessage(cid string, user User, mid string) (Conversa
 	return db.GetConversation(cid)
 }
 
-func (db *appdbimpl) getConversationMessages(cid string) ([]Message, error) {
+func (db *appdbimpl) GetConversationMessages(cid string) ([]Message, error) {
 	rows, err := db.c.Query(`
 		SELECT m.id, m.conversation_id, m.message, m.sender_id, m.timestamp, u.username
 		FROM messages m 

@@ -8,6 +8,7 @@ func (rt *_router) Handler() http.Handler {
 	r := rt.router
 
 	// Public routes (no authentication required)
+	r.GET("/", rt.wrap(rt.getApiRoot))
 	r.POST("/session", rt.wrap(rt.doLogin))
 	r.GET("/liveness", rt.wrap(rt.liveness))
 

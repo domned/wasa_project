@@ -16,14 +16,19 @@
 				@chat-deleted="handleChatDeleted"
 				@logout="handleLogout"
 				@username-updated="handleUsernameUpdated"
+				@photo-updated="handlePhotoUpdated"
+				@show-admin="showAdminDashboard"
 			/>
 		</aside>
 		<div class="divider"></div>
 		<main class="chat-root">
+			<AdminDashboard v-if="isAdminView" />
 			<ChatView
+				v-else
 				:chat="selectedChat"
 				:messages="selectedMessages"
 				@message-sent="handleMessageSent"
+				@conversation-updated="handleWebSocketConversationUpdated"
 			/>
 		</main>
 
@@ -34,10 +39,12 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import axios from './services/axios.js';
+import { apiService } from './services/api.js';
+import webSocketService from './services/websocket.js';
 import Login from './components/Login.vue';
 import Sidebar from './components/Sidebar.vue';
 import ChatView from './components/ChatView.vue';
+import AdminDashboard from './components/AdminDashboard.vue';
 import CreateConversation from './components/CreateConversation.vue';
 
 // Check if user is logged in
@@ -50,6 +57,7 @@ const selectedChat = ref(null);
 const selectedMessages = ref([]);
 const chats = ref([]); // Store all chats from Sidebar
 const sidebarRef = ref(null);
+const isAdminView = ref(false);
 
 // Check login status on app start
 function checkLoginStatus() {
@@ -65,22 +73,18 @@ function checkLoginStatus() {
 }
 
 function handleLoginSuccess(userData) {
-	userId.value = userData.userId;
-	username.value = userData.username;
-	isLoggedIn.value = true;
-	
-	// Add a small delay to ensure localStorage is properly set
-	setTimeout(() => {
-		fetchUserData();
-		startChatPolling(); // Start polling after login
-	}, 100);
+	handleLoginSuccessWithWebSocket(userData);
 }
 
 async function fetchUserData() {
 	if (!userId.value) return;
 	try {
-		const res = await axios.get('/users');
-		const user = (res.data || []).find((u) => u.id === userId.value);
+		const response = await apiService.users.listAll();
+		console.log('Users API response:', response);
+		
+		// The API likely returns the data directly, not wrapped in success/data
+		const users = response.data || response;
+		const user = users.find((u) => u.id === userId.value);
 		if (user) {
 			username.value = user.username;
 			userPicture.value = user.picture || '';
@@ -113,13 +117,20 @@ function handleUsernameUpdated(newUsername) {
 	// Update localStorage is already handled in Sidebar component
 }
 
+function handlePhotoUpdated(newPhotoUrl) {
+	userPicture.value = newPhotoUrl;
+	// You might want to store this in localStorage if needed
+}
+
 onMounted(() => {
 	checkLoginStatus();
 	startChatPolling();
+	initializeWebSocket();
 });
 
 onUnmounted(() => {
 	stopChatPolling();
+	webSocketService.disconnect();
 });
 
 // Polling mechanism to update chats periodically
@@ -158,6 +169,9 @@ function handleChatsLoaded(loadedChats) {
 }
 
 async function selectChat(chatId) {
+	// Exit admin view when selecting a chat
+	isAdminView.value = false;
+
 	selectedChatId.value = chatId;
 	// Find the chat object by id
 	selectedChat.value = chats.value.find((c) => c.id === chatId) || null;
@@ -166,14 +180,20 @@ async function selectChat(chatId) {
 	const previousMessageCount = selectedMessages.value.length;
 
 	try {
-		const res = await axios.get(
-			`/users/${userId.value}/conversations/${chatId}/messages`
+		const response = await apiService.messages.getConversationMessages(
+			userId.value,
+			chatId
 		);
-		// Add 'own' property to each message based on current user ID
-		const newMessages = res.data.map((msg) => ({
-			...msg,
-			own: msg.senderId === userId.value,
-		}));
+		if (response.success) {
+			// Add 'own' property to each message based on current user ID
+			const newMessages = response.data.map((msg) => ({
+				...msg,
+				own: msg.senderId === userId.value,
+			}));
+			selectedMessages.value = newMessages;
+		} else {
+			selectedMessages.value = [];
+		}
 
 		// Check if new messages were received (not sent by current user)
 		if (
@@ -191,9 +211,8 @@ async function selectChat(chatId) {
 				});
 			}
 		}
-
-		selectedMessages.value = newMessages;
 	} catch (err) {
+		console.error('Failed to load messages:', err);
 		selectedMessages.value = [];
 	}
 }
@@ -244,6 +263,171 @@ function handleChatDeleted(chatId) {
 	}
 	// Update local chats array
 	chats.value = chats.value.filter((chat) => chat.id !== chatId);
+}
+
+function showAdminDashboard() {
+	isAdminView.value = true;
+	// Clear chat selection when viewing admin
+	selectedChatId.value = null;
+	selectedChat.value = null;
+	selectedMessages.value = [];
+}
+
+// WebSocket Integration
+function initializeWebSocket() {
+	if (!userId.value) return;
+
+	// Connect to WebSocket
+	webSocketService.connect(userId.value);
+
+	// Set up event listeners
+	webSocketService.on('connected', handleWebSocketConnected);
+	webSocketService.on('disconnected', handleWebSocketDisconnected);
+	webSocketService.on('message', handleWebSocketMessage);
+	webSocketService.on('messageDeleted', handleWebSocketMessageDeleted);
+	webSocketService.on('reactionChanged', handleWebSocketReactionChanged);
+	webSocketService.on('commentAdded', handleWebSocketCommentAdded);
+	webSocketService.on('commentDeleted', handleWebSocketCommentDeleted);
+	webSocketService.on('userOnline', handleWebSocketUserOnline);
+	webSocketService.on('userOffline', handleWebSocketUserOffline);
+	webSocketService.on(
+		'conversationUpdated',
+		handleWebSocketConversationUpdated
+	);
+	webSocketService.on('typingStart', handleWebSocketTypingStart);
+	webSocketService.on('typingStop', handleWebSocketTypingStop);
+}
+
+function handleWebSocketConnected() {
+	console.log('WebSocket connected - real-time updates enabled');
+	// Reduce polling frequency since we have real-time updates
+	stopChatPolling();
+	startReducedPolling();
+}
+
+function handleWebSocketDisconnected() {
+	console.log('WebSocket disconnected - falling back to polling');
+	// Resume normal polling as fallback
+	stopChatPolling();
+	startChatPolling();
+}
+
+function handleWebSocketMessage(messageData) {
+	// Handle incoming real-time messages
+	if (messageData.conversation_id === selectedChatId.value) {
+		// Refresh current chat messages
+		selectChat(selectedChatId.value);
+	}
+
+	// Update sidebar with new message
+	if (sidebarRef.value) {
+		sidebarRef.value.updateChatWithNewMessage(messageData.conversation_id, {
+			id: messageData.id,
+			senderId: messageData.sender_id,
+			text: messageData.text,
+			senderUsername: messageData.sender_username,
+		});
+	}
+}
+
+function handleWebSocketMessageDeleted(messageData) {
+	// Refresh current chat if the deleted message was in the active chat
+	if (messageData.conversation_id === selectedChatId.value) {
+		selectChat(selectedChatId.value);
+	}
+}
+
+function handleWebSocketReactionChanged(reactionData) {
+	// Refresh current chat if the reaction was on a message in the active chat
+	if (reactionData.conversation_id === selectedChatId.value) {
+		selectChat(selectedChatId.value);
+	}
+}
+
+function handleWebSocketCommentAdded(commentData) {
+	// Comments are handled within MessageBubble component
+	// This could be used for notifications or badges
+	console.log('New comment added:', commentData);
+}
+
+function handleWebSocketCommentDeleted(commentData) {
+	// Comments are handled within MessageBubble component
+	console.log('Comment deleted:', commentData);
+}
+
+function handleWebSocketUserOnline(userData) {
+	console.log(`User ${userData.username} is now online`);
+	// Update user status in sidebar if needed
+	if (sidebarRef.value) {
+		sidebarRef.value.updateUserOnlineStatus(userData.user_id, true);
+	}
+}
+
+function handleWebSocketUserOffline(userData) {
+	console.log(`User ${userData.username} is now offline`);
+	// Update user status in sidebar if needed
+	if (sidebarRef.value) {
+		sidebarRef.value.updateUserOnlineStatus(userData.user_id, false);
+	}
+}
+
+function handleWebSocketConversationUpdated(conversationData) {
+	// Update the conversation in our local data
+	const chatIndex = chats.value.findIndex(
+		(c) => c.id === conversationData.id
+	);
+	if (chatIndex !== -1) {
+		chats.value[chatIndex] = {
+			...chats.value[chatIndex],
+			...conversationData,
+		};
+
+		// If this is the selected chat, update it too
+		if (selectedChatId.value === conversationData.id) {
+			selectedChat.value = { ...selectedChat.value, ...conversationData };
+		}
+	}
+
+	// Refresh sidebar to show updated conversation
+	if (sidebarRef.value) {
+		sidebarRef.value.refreshChats();
+	}
+}
+
+function handleWebSocketTypingStart(typingData) {
+	// Handle typing indicators (could show "User is typing..." in chat header)
+	console.log(
+		`${typingData.username} started typing in conversation ${typingData.conversation_id}`
+	);
+}
+
+function handleWebSocketTypingStop(typingData) {
+	// Handle typing indicators
+	console.log(
+		`${typingData.username} stopped typing in conversation ${typingData.conversation_id}`
+	);
+}
+
+// Reduced polling for when WebSocket is connected
+function startReducedPolling() {
+	// Poll less frequently when WebSocket is active (mainly for backup)
+	pollingInterval = setInterval(() => {
+		if (isLoggedIn.value && sidebarRef.value) {
+			sidebarRef.value.refreshChats();
+		}
+	}, 60000); // 1 minute instead of 15 seconds
+}
+
+// Update the handleLoginSuccess to initialize WebSocket
+function handleLoginSuccessWithWebSocket(userData) {
+	console.log('handleLoginSuccessWithWebSocket called with:', userData);
+	userId.value = userData.userId;
+	username.value = userData.username;
+	isLoggedIn.value = true;
+	console.log('Set login state. isLoggedIn:', isLoggedIn.value, 'userId:', userId.value);
+	fetchUserData();
+	startChatPolling();
+	initializeWebSocket(); // Initialize WebSocket on login
 }
 </script>
 

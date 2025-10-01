@@ -82,6 +82,7 @@ type AppDatabase interface {
 	SetGroupPhoto(cid string, picture string) (Conversation, error)
 	SendMessage(cid string, user User, message string) (Conversation, error)
 	SendMessageWithImage(cid string, user User, message string, imageUrl string) (Conversation, error)
+	GetConversationMessages(cid string) ([]Message, error)
 	DeleteMessage(cid string, user User, mid string) (Conversation, error)
 	ForwardMessage(cid string, user User, mid string) (Conversation, error)
 	ReactToMessage(cid string, user User, mid string, emoji string) (Conversation, error)
