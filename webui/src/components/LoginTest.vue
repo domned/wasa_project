@@ -3,9 +3,7 @@
 		<div class="login-card">
 			<h1 class="login-title">WASAText - DEBUG</h1>
 			<p class="login-subtitle">Simple test version</p>
-			<button @click="testLogin" class="login-button">
-				TEST LOGIN
-			</button>
+			<button @click="testLogin" class="login-button">TEST LOGIN</button>
 			<div>Debug: Component loaded successfully</div>
 		</div>
 	</div>
@@ -34,7 +32,7 @@ function testLogin() {
 	background: white;
 	padding: 2rem;
 	border-radius: 8px;
-	box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 	text-align: center;
 }
 

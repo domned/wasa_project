@@ -15,12 +15,7 @@
 					/>
 				</div>
 
-				<button
-					type="submit"
-					class="login-button"
-				>
-					Test Login
-				</button>
+				<button type="submit" class="login-button">Test Login</button>
 			</form>
 
 			<div v-if="error" class="error-message">
@@ -42,7 +37,7 @@ const error = ref('');
 
 function handleLogin() {
 	console.log('Simple handleLogin called with:', username.value);
-	
+
 	// Simulate successful login
 	setTimeout(() => {
 		console.log('Emitting fake login success');
@@ -68,7 +63,7 @@ function handleLogin() {
 	background: white;
 	padding: 2rem;
 	border-radius: 8px;
-	box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 	width: 100%;
 	max-width: 400px;
 }

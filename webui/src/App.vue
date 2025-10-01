@@ -81,7 +81,7 @@ async function fetchUserData() {
 	try {
 		const response = await apiService.users.listAll();
 		console.log('Users API response:', response);
-		
+
 		// The API likely returns the data directly, not wrapped in success/data
 		const users = response.data || response;
 		const user = users.find((u) => u.id === userId.value);
@@ -424,7 +424,12 @@ function handleLoginSuccessWithWebSocket(userData) {
 	userId.value = userData.userId;
 	username.value = userData.username;
 	isLoggedIn.value = true;
-	console.log('Set login state. isLoggedIn:', isLoggedIn.value, 'userId:', userId.value);
+	console.log(
+		'Set login state. isLoggedIn:',
+		isLoggedIn.value,
+		'userId:',
+		userId.value
+	);
 	fetchUserData();
 	startChatPolling();
 	initializeWebSocket(); // Initialize WebSocket on login

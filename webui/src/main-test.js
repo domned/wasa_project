@@ -1,9 +1,9 @@
-import {createApp} from 'vue'
+import { createApp } from 'vue';
 
 console.log('main.js loading...');
 
 const app = createApp({
-  template: `
+	template: `
     <div style="padding: 2rem; text-align: center; font-family: Arial;">
       <h1>Vue App Test</h1>
       <p>If you can see this, Vue is working!</p>
@@ -12,16 +12,16 @@ const app = createApp({
       </button>
     </div>
   `,
-  setup() {
-    console.log('Vue app setup running');
-    
-    function testClick() {
-      console.log('Button clicked!');
-      alert('Vue is working!');
-    }
-    
-    return { testClick };
-  }
+	setup() {
+		console.log('Vue app setup running');
+
+		function testClick() {
+			console.log('Button clicked!');
+			alert('Vue is working!');
+		}
+
+		return { testClick };
+	},
 });
 
 console.log('Mounting app...');
