@@ -141,14 +141,9 @@
 							</td>
 							<td>{{ formatDate(user.lastActive) }}</td>
 							<td>
-								<button
-									class="btn btn-sm btn-outline-warning"
-									@click="disconnectUser(user.id)"
-									:disabled="!user.online"
-									title="Disconnect user"
-								>
-									Disconnect
-								</button>
+								<span class="badge bg-secondary">
+									Monitor Only
+								</span>
 							</td>
 						</tr>
 					</tbody>
@@ -349,22 +344,6 @@ function getHealthStatusClass(status) {
 		return 'error';
 	}
 	return 'unknown';
-}
-
-async function disconnectUser(userId) {
-	if (!confirm('Disconnect this user from the system?')) return;
-
-	try {
-		const response = await apiService.health.disconnectUser(userId);
-		if (response.success) {
-			await loadActiveUsers();
-		} else {
-			alert('Failed to disconnect user');
-		}
-	} catch (err) {
-		console.error('Failed to disconnect user:', err);
-		alert('Failed to disconnect user');
-	}
 }
 
 function formatDate(dateString) {

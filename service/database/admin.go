@@ -33,7 +33,7 @@ func (db *appdbimpl) GetRecentLogs(limit int) ([]LogEntry, error) {
 		ORDER BY timestamp DESC 
 		LIMIT ?
 	`
-	
+
 	rows, err := db.c.Query(query, limit)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (db *appdbimpl) AddLogEntry(level, message string) error {
 		INSERT INTO system_logs (timestamp, level, message) 
 		VALUES (?, ?, ?)
 	`
-	
+
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	_, err := db.c.Exec(query, timestamp, level, message)
 	return err

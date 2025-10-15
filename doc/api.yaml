@@ -69,7 +69,7 @@ components:
                 username:
                     type: string
                     example: 'Alice'
-                    pattern: '^.*?$'
+                    pattern: '^.*$'
                     minLength: 3
                     maxLength: 16
                 picture:
@@ -127,26 +127,45 @@ components:
                     type: string
                     example: '85f9cc23-48d7-448d-9172-7d5fd9cd4858'
                     description: UUID of the message
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 senderId:
                     type: string
                     example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
                     description: UUID of the message sender
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 text:
                     type: string
                     example: 'Hello, how are you?'
                     description: Content of the message
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 5000
                 imageUrl:
                     type: string
                     example: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...'
-                    description: Base64 encoded image data with MIME type prefix (optional)
+                    description: Base64 encoded image data
+                    pattern: '^data:image\/(jpeg|jpg|png|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$'
+                    minLength: 20
+                    maxLength: 10485760
                 senderUsername:
                     type: string
                     example: 'Alice'
                     description: Username of the message sender
+                    pattern: '^.*$'
+                    minLength: 3
+                    maxLength: 16
                 time:
                     type: string
+                    format: date-time
                     example: '2025-01-01T12:00:00Z'
                     description: Timestamp when the message was sent
+                    pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$'
+                    minLength: 19
+                    maxLength: 24
                 reactions:
                     type: object
                     additionalProperties:
@@ -155,13 +174,21 @@ components:
                             count:
                                 type: integer
                                 example: 3
+                                minimum: 1
+                                maximum: 10000
+                                description: Number of users who reacted with this emoji
                             users:
                                 type: array
                                 items:
                                     type: string
+                                    pattern: '^.*$'
+                                    minLength: 3
+                                    maxLength: 16
+                                    description: Username of a user who reacted
                                 example: ['Alice', 'Bob']
                                 minItems: 1
                                 maxItems: 50
+                                description: List of usernames who reacted with this emoji
                     description: >-
                         Reactions to the message (emoji -> reaction data)
             required:
@@ -178,6 +205,9 @@ components:
                     type: string
                     example: '👍'
                     description: The emoji reaction to toggle (add if not present, remove if already exists)
+                    pattern: '^.{1,10}$'
+                    minLength: 1
+                    maxLength: 10
             required:
                 - emoji
 
@@ -189,18 +219,30 @@ components:
                     type: string
                     example: 'comment-uuid'
                     description: UUID of the comment
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 messageId:
                     type: string
                     example: 'message-uuid'
                     description: UUID of the parent message
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 senderId:
                     type: string
                     example: 'user-uuid'
                     description: UUID of the comment sender
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 content:
                     type: string
                     example: 'Great point!'
                     description: Content of the comment
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 500
             required:
                 - id
                 - messageId
@@ -215,18 +257,30 @@ components:
                     type: string
                     example: 'contact-uuid'
                     description: UUID of the contact
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 userId:
                     type: string
                     example: 'user-uuid'
                     description: UUID of the user who owns this contact
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 contactUserId:
                     type: string
                     example: 'contact-user-uuid'
                     description: UUID of the user being contacted
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
                 username:
                     type: string
                     example: 'Bob'
                     description: Username of the contact
+                    pattern: '^.*$'
+                    minLength: 3
+                    maxLength: 16
             required:
                 - id
                 - userId
@@ -240,7 +294,8 @@ components:
                 name:
                     type: string
                     example: 'Alice'
-                    pattern: '^.*?$'
+                    description: Username for login or registration
+                    pattern: '^[a-zA-Z0-9_]+$'
                     minLength: 3
                     maxLength: 16
             required:
@@ -254,6 +309,9 @@ components:
                     type: string
                     example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
                     description: UUID of the logged in user
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
             required:
                 - identifier
 
@@ -265,10 +323,16 @@ components:
                     type: string
                     example: 'Hello everyone!'
                     description: Content of the message to send
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 5000
                 imageUrl:
                     type: string
                     example: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...'
                     description: Base64 encoded image data with MIME type prefix (optional)
+                    pattern: '^data:image\/(jpeg|jpg|png|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$'
+                    minLength: 20
+                    maxLength: 10485760
             anyOf:
                 - required: [content]
                 - required: [imageUrl]
@@ -281,6 +345,10 @@ components:
                     type: array
                     items:
                         type: string
+                        pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                        minLength: 36
+                        maxLength: 36
+                        description: UUID of a participant user
                     example: ['user-uuid-1', 'user-uuid-2']
                     description: >-
                         List of user UUIDs to include in the conversation
@@ -291,6 +359,9 @@ components:
                     example: 'Project Discussion'
                     description: >-
                         Name for the conversation (optional for 1:1 chats)
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 100
             required:
                 - participants
 
@@ -302,6 +373,9 @@ components:
                     type: string
                     example: 'target-conversation-uuid'
                     description: UUID of the target conversation
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
             required:
                 - content
 
@@ -313,6 +387,9 @@ components:
                     type: string
                     example: 'user-uuid'
                     description: UUID of the user to add as contact
+                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                    minLength: 36
+                    maxLength: 36
             required:
                 - contactUserId
 
@@ -324,6 +401,9 @@ components:
                     type: string
                     example: 'Great message!'
                     description: Content of the comment
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 500
             required:
                 - content
 
@@ -349,8 +429,146 @@ components:
                     type: string
                     example: 'Invalid input provided'
                     description: Error message describing what went wrong
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 500
             required:
                 - message
+
+        AdminHealthResponse:
+            type: object
+            description: System health status response for administrative monitoring
+            properties:
+                database:
+                    type: string
+                    example: 'Healthy'
+                    description: Database connection health status
+                    pattern: '^(Healthy|Error|Unknown)$'
+                    minLength: 5
+                    maxLength: 10
+                websocket:
+                    type: string
+                    example: 'Active'
+                    description: WebSocket connection health status
+                    pattern: '^(Active|Idle|Not initialized|Error)$'
+                    minLength: 4
+                    maxLength: 15
+                api:
+                    type: string
+                    example: 'Running'
+                    description: API service health status
+                    pattern: '^(Running|Error|Stopped)$'
+                    minLength: 5
+                    maxLength: 8
+                uptime:
+                    type: string
+                    example: '2 days, 14 hours, 32 minutes'
+                    description: Server uptime in human-readable format
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 100
+            required:
+                - database
+                - websocket
+                - api
+                - uptime
+
+        AdminStatsResponse:
+            type: object
+            description: System statistics response for administrative monitoring
+            properties:
+                total_users:
+                    type: integer
+                    example: 150
+                    description: Total number of users in the system
+                    minimum: 0
+                    maximum: 1000000
+                active_users:
+                    type: integer
+                    example: 23
+                    description: Number of users active in the last 24 hours
+                    minimum: 0
+                    maximum: 1000000
+                total_conversations:
+                    type: integer
+                    example: 87
+                    description: Total number of conversations in the system
+                    minimum: 0
+                    maximum: 1000000
+                total_messages:
+                    type: integer
+                    example: 2341
+                    description: Total number of messages sent in the system
+                    minimum: 0
+                    maximum: 10000000
+                active_connections:
+                    type: integer
+                    example: 12
+                    description: Number of active WebSocket connections
+                    minimum: 0
+                    maximum: 10000
+                error_rate:
+                    type: number
+                    format: float
+                    example: 0.01
+                    description: Current system error rate (0.0 to 1.0)
+                    minimum: 0.0
+                    maximum: 1.0
+            required:
+                - total_users
+                - active_users
+                - total_conversations
+                - total_messages
+                - active_connections
+                - error_rate
+
+        LogEntry:
+            type: object
+            description: System log entry for administrative monitoring
+            properties:
+                id:
+                    type: integer
+                    example: 12345
+                    description: Unique identifier for the log entry
+                    minimum: 1
+                level:
+                    type: string
+                    example: 'INFO'
+                    description: Log level (DEBUG, INFO, WARN, ERROR, FATAL)
+                    pattern: '^(DEBUG|INFO|WARN|ERROR|FATAL)$'
+                    minLength: 4
+                    maxLength: 5
+                message:
+                    type: string
+                    example: 'User logged in successfully'
+                    description: Log message content
+                    pattern: '^.*$'
+                    minLength: 1
+                    maxLength: 1000
+                timestamp:
+                    type: string
+                    format: date-time
+                    example: '2025-01-15T14:30:00Z'
+                    description: Timestamp when the log entry was created
+            required:
+                - id
+                - level
+                - message
+                - timestamp
+
+        AdminLogsResponse:
+            type: object
+            description: System logs response for administrative monitoring
+            properties:
+                logs:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/LogEntry'
+                    description: Array of recent system log entries
+                    minItems: 0
+                    maxItems: 100
+            required:
+                - logs
 
     responses:
         SuccessMessage:
@@ -363,6 +581,12 @@ components:
                             message:
                                 type: string
                                 example: 'Operation completed successfully'
+                                description: Success message indicating the operation was completed
+                                pattern: '^.*$'
+                                minLength: 1
+                                maxLength: 200
+                        required:
+                            - message
 
         UnauthorizedError:
             description: Authentication information is missing or invalid
@@ -533,6 +757,10 @@ paths:
                         schema:
                             type: string
                             example: 'https://example.com/new-avatar.jpg'
+                            description: URL of the new profile picture
+                            pattern: '^https?://.*'
+                            minLength: 10
+                            maxLength: 2048
                 required: true
             responses:
                 '200':
@@ -571,6 +799,15 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                description: User context information
+                                properties:
+                                    context:
+                                        type: string
+                                        description: Context information for the user
+                                        pattern: '^.*$'
+                                        minLength: 0
+                                        maxLength: 1000
+                                        example: 'User is active and has recent messages'
                 '404':
                     description: User not found
                     content:
@@ -704,10 +941,16 @@ paths:
                     application/json:
                         schema:
                             type: object
+                            description: Request to add a user to a group conversation
                             properties:
                                 userId:
                                     type: string
                                     format: uuid
+                                    description: UUID of the user to add to the group
+                                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                                    minLength: 36
+                                    maxLength: 36
+                                    example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
                             required:
                                 - userId
                 required: true
@@ -769,6 +1012,10 @@ paths:
                         schema:
                             type: string
                             example: 'Project Team'
+                            description: New name for the group conversation
+                            pattern: '^.*$'
+                            minLength: 1
+                            maxLength: 100
                 required: true
             responses:
                 '200':
@@ -814,6 +1061,10 @@ paths:
                         schema:
                             type: string
                             example: 'https://example.com/group-photo.jpg'
+                            description: URL of the new group photo
+                            pattern: '^https?://.*'
+                            minLength: 10
+                            maxLength: 2048
                 required: true
             responses:
                 '200':
@@ -889,6 +1140,10 @@ paths:
                             schema:
                                 type: string
                                 description: UUID of the created message
+                                format: uuid
+                                pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                                minLength: 36
+                                maxLength: 36
                 '400':
                     description: Invalid message content
                     content:
@@ -1081,6 +1336,9 @@ paths:
               required: true
               schema:
                   type: string
+                  pattern: '^.{1,10}$'
+                  minLength: 1
+                  maxLength: 10
         delete:
             tags: ['Reactions']
             summary: Remove reaction
@@ -1348,8 +1606,118 @@ paths:
             responses:
                 '200':
                     description: Server is healthy
+
+    /admin/health:
+        get:
+            tags: ['Health']
+            summary: System health status
+            description: Returns detailed system health information for administrative monitoring
+            operationId: getAdminHealth
+            security:
+                - bearerAuth: []
+            responses:
+                '200':
+                    description: System health status retrieved successfully
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
-                                example: 'OK'
+                                $ref: '#/components/schemas/AdminHealthResponse'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    description: Internal server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /admin/stats:
+        get:
+            tags: ['Health']
+            summary: System statistics
+            description: Returns detailed system statistics for administrative monitoring
+            operationId: getAdminStats
+            security:
+                - bearerAuth: []
+            responses:
+                '200':
+                    description: System statistics retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AdminStatsResponse'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    description: Internal server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /admin/logs:
+        get:
+            tags: ['Health']
+            summary: System logs
+            description: Returns recent system log entries for administrative monitoring
+            operationId: getAdminLogs
+            security:
+                - bearerAuth: []
+            parameters:
+                - name: limit
+                  in: query
+                  description: Maximum number of log entries to return
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 100
+                      default: 50
+            responses:
+                '200':
+                    description: System logs retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AdminLogsResponse'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    description: Internal server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+
+    /admin/online-users:
+        get:
+            tags: ['Users']
+            summary: Online users
+            description: Returns list of currently online user IDs based on active WebSocket connections
+            operationId: getOnlineUsers
+            security:
+                - bearerAuth: []
+            responses:
+                '200':
+                    description: Online users list retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    type: string
+                                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                                    minLength: 36
+                                    maxLength: 36
+                                    description: UUID of an online user
+                                minItems: 0
+                                maxItems: 1000
+                                description: List of UUIDs of currently online users
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    description: Internal server error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'

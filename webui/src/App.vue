@@ -180,13 +180,13 @@ async function selectChat(chatId) {
 	const previousMessageCount = selectedMessages.value.length;
 
 	try {
-		const response = await apiService.messages.getConversationMessages(
+		const messages = await apiService.messages.getConversationMessages(
 			userId.value,
 			chatId
 		);
-		if (response.success) {
+		if (messages && Array.isArray(messages)) {
 			// Add 'own' property to each message based on current user ID
-			const newMessages = response.data.map((msg) => ({
+			const newMessages = messages.map((msg) => ({
 				...msg,
 				own: msg.senderId === userId.value,
 			}));
@@ -197,10 +197,10 @@ async function selectChat(chatId) {
 
 		// Check if new messages were received (not sent by current user)
 		if (
-			newMessages.length > previousMessageCount &&
+			selectedMessages.value.length > previousMessageCount &&
 			previousMessageCount > 0
 		) {
-			const latestMessage = newMessages[newMessages.length - 1];
+			const latestMessage = selectedMessages.value[selectedMessages.value.length - 1];
 			if (!latestMessage.own && sidebarRef.value) {
 				// New message received from someone else, update sidebar
 				sidebarRef.value.updateChatWithNewMessage(chatId, {

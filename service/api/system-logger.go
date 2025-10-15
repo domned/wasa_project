@@ -39,12 +39,12 @@ func (sl *SystemLogger) LogDebug(message string) {
 func (sl *SystemLogger) log(level, message string) {
 	// Add timestamp to message for more context
 	timestampedMessage := fmt.Sprintf("[%s] %s", time.Now().UTC().Format("15:04:05"), message)
-	
+
 	// Log to database
 	if err := sl.rt.db.AddLogEntry(level, timestampedMessage); err != nil {
 		sl.rt.baseLogger.WithError(err).Error("Failed to add log entry to database")
 	}
-	
+
 	// Also log to application logger
 	switch level {
 	case "error":

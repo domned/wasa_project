@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS messages (
     conversation_id TEXT NOT NULL,
     sender_id TEXT NOT NULL,
     message TEXT NOT NULL,
+    image_url TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
@@ -63,9 +65,4 @@ CREATE TABLE IF NOT EXISTS system_logs (
     level TEXT NOT NULL,
     message TEXT NOT NULL
 );
-
--- Migration: Add last_seen column to existing users table if it doesn't exist
--- This handles existing databases that don't have the last_seen column
--- For new databases, the column is already included in the CREATE TABLE above
--- SQLite will ignore this if the column already exists (with IF NOT EXISTS logic in Go code)
 

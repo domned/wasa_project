@@ -84,13 +84,13 @@ func New(cfg Config) (Router, error) {
 		baseLogger: cfg.Logger,
 		db:         cfg.Database,
 	}
-	
+
 	// Initialize system logger
 	rt.sysLogger = NewSystemLogger(rt)
-	
+
 	// Initialize WebSocket hub
 	InitializeHub(rt)
-	
+
 	// Log system startup
 	rt.sysLogger.LogInfo("API server initialized successfully")
 	rt.sysLogger.LogInfo("Database connection established")
@@ -105,6 +105,6 @@ type _router struct {
 	// Use context logger if available (e.g., in requests) instead of this logger.
 	baseLogger logrus.FieldLogger
 
-	db           database.AppDatabase
-	sysLogger    *SystemLogger
+	db        database.AppDatabase
+	sysLogger *SystemLogger
 }

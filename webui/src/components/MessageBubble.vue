@@ -193,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { apiService } from '../services/api.js';
 
 const props = defineProps({
@@ -202,7 +202,12 @@ const props = defineProps({
 	chat: Object,
 });
 
-const emit = defineEmits(['reaction-changed', 'message-deleted']);
+const emit = defineEmits([
+	'reaction-changed',
+	'message-deleted',
+	'comment-added',
+	'comment-deleted',
+]);
 
 const showReactionPicker = ref(false);
 const showImageModal = ref(false);
@@ -211,6 +216,18 @@ const comments = ref([]);
 const newCommentText = ref('');
 const isAddingComment = ref(false);
 const currentUserId = localStorage.getItem('userId');
+
+// Initialize comments from message data when component mounts or message changes
+function initializeComments() {
+	if (props.msg.comments && Array.isArray(props.msg.comments)) {
+		comments.value = props.msg.comments;
+	} else {
+		comments.value = [];
+	}
+}
+
+// Watch for message prop changes and reinitialize comments
+watch(() => props.msg, initializeComments, { immediate: true, deep: true });
 
 function openImageModal() {
 	showImageModal.value = true;
@@ -435,23 +452,19 @@ const commentCount = computed(() => {
 });
 
 // Comment-related methods
-async function toggleComments() {
+function toggleComments() {
 	showComments.value = !showComments.value;
-	if (showComments.value && comments.value.length === 0) {
-		await loadComments();
-	}
+	// Comments are already loaded from props.msg.comments via watcher
 }
 
 async function loadComments() {
-	try {
-		const response = await apiService.comments.getMessageComments(
-			props.msg.id
-		);
-		if (response.success) {
-			comments.value = response.data;
-		}
-	} catch (error) {
-		console.error('Failed to load comments:', error);
+	// Comments are loaded as part of message data from the backend
+	// The message object should include a comments array with comment objects
+	if (props.msg.comments && Array.isArray(props.msg.comments)) {
+		comments.value = props.msg.comments;
+	} else {
+		// Initialize empty comments array if not present in message data
+		comments.value = [];
 	}
 }
 
@@ -461,15 +474,18 @@ async function addComment() {
 	isAddingComment.value = true;
 
 	try {
-		const response = await apiService.comments.addComment(
+		const response = await apiService.comments.add(
+			currentUserId,
+			props.chat.id,
 			props.msg.id,
 			newCommentText.value.trim()
 		);
 
-		if (response.success) {
-			comments.value.push(response.data);
-			newCommentText.value = '';
-		}
+		comments.value.push(response);
+		newCommentText.value = '';
+
+		// Emit event to notify parent component of new comment
+		emit('comment-added', { messageId: props.msg.id, comment: response });
 	} catch (error) {
 		console.error('Failed to add comment:', error);
 	} finally {
@@ -481,10 +497,17 @@ async function deleteComment(commentId) {
 	if (!confirm('Delete this comment?')) return;
 
 	try {
-		const response = await apiService.comments.deleteComment(commentId);
-		if (response.success) {
-			comments.value = comments.value.filter((c) => c.id !== commentId);
-		}
+		await apiService.comments.delete(
+			currentUserId,
+			props.chat.id,
+			props.msg.id,
+			commentId
+		);
+
+		comments.value = comments.value.filter((c) => c.id !== commentId);
+
+		// Emit event to notify parent component of comment deletion
+		emit('comment-deleted', { messageId: props.msg.id, commentId });
 	} catch (error) {
 		console.error('Failed to delete comment:', error);
 	}

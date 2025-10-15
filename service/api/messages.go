@@ -77,11 +77,11 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 
 	// Broadcast message to WebSocket clients
 	messageData := map[string]interface{}{
-		"id":             messageId.String(),
+		"id":              messageId.String(),
 		"conversation_id": conversationId,
-		"sender_id":      userId,
-		"content":        requestBody.Content,
-		"image_url":      requestBody.ImageUrl,
+		"sender_id":       userId,
+		"content":         requestBody.Content,
+		"image_url":       requestBody.ImageUrl,
 	}
 	BroadcastMessage("message", messageData)
 	rt.sysLogger.LogDebug("Message broadcasted to WebSocket clients")

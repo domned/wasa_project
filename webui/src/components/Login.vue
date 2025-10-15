@@ -45,6 +45,8 @@
 </template>
 
 <script>
+import { auth } from '../services/api.js';
+
 export default {
 	name: 'Login',
 	emits: ['login-success'],
@@ -73,20 +75,8 @@ export default {
 			try {
 				console.log('Attempting login with username:', this.username);
 
-				// Make actual API call
-				const response = await fetch('/api/session', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({ name: this.username }),
-				});
-
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				// Make API call using the configured API service
+				const data = await auth.login(this.username);
 				const userId = data.identifier;
 				console.log('Login successful, userId:', userId);
 

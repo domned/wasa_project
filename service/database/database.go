@@ -104,7 +104,7 @@ type AppDatabase interface {
 	RemoveContact(user User, contact User) (User, error)
 	GetAllConversations() ([]Conversation, error)
 	GetRawDB() *sql.DB
-	
+
 	// Admin methods
 	GetUserCount() (int, error)
 	GetConversationCount() (int, error)
@@ -177,6 +177,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		sender_id TEXT NOT NULL,
 		message TEXT NOT NULL,
 		image_url TEXT,
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 	);`
 	if _, err := db.Exec(messagesTable); err != nil {

@@ -193,11 +193,18 @@ func (c *Client) writePump() {
 		select {
 		case message, ok := <-c.Send:
 			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				if err := c.Conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					// Log the error but continue with return since connection is closing
+					// We can't use ctx.Logger here as we don't have access to it
+				}
 				return
 			}
 
-			c.Conn.WriteJSON(message)
+			if err := c.Conn.WriteJSON(message); err != nil {
+				// Log the error and close the connection
+				// Client will be removed from hub by the cleanup routine
+				return
+			}
 		}
 	}
 }

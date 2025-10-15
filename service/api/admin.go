@@ -21,11 +21,11 @@ type AdminHealthResponse struct {
 
 // AdminStatsResponse represents the system statistics response
 type AdminStatsResponse struct {
-	TotalUsers         int `json:"total_users"`
-	ActiveUsers        int `json:"active_users"`
-	TotalConversations int `json:"total_conversations"`
-	TotalMessages      int `json:"total_messages"`
-	ActiveConnections  int `json:"active_connections"`
+	TotalUsers         int     `json:"total_users"`
+	ActiveUsers        int     `json:"active_users"`
+	TotalConversations int     `json:"total_conversations"`
+	TotalMessages      int     `json:"total_messages"`
+	ActiveConnections  int     `json:"active_connections"`
 	ErrorRate          float64 `json:"error_rate"`
 }
 
@@ -71,7 +71,11 @@ func (rt *_router) getAdminHealth(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		ctx.Logger.WithError(err).Error("Failed to encode admin health response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // getAdminStats returns system statistics
@@ -125,7 +129,11 @@ func (rt *_router) getAdminStats(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		ctx.Logger.WithError(err).Error("Failed to encode admin stats response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // getAdminLogs returns recent system logs
@@ -143,14 +151,18 @@ func (rt *_router) getAdminLogs(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		ctx.Logger.WithError(err).Error("Failed to encode admin logs response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // formatUptime formats a duration into a human-readable uptime string
 // getOnlineUsers returns list of currently online users based on WebSocket connections
 func (rt *_router) getOnlineUsers(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	onlineUserIDs := make(map[string]bool)
-	
+
 	// Get online users from WebSocket hub
 	if hub != nil {
 		hub.mutex.RLock()
@@ -159,22 +171,26 @@ func (rt *_router) getOnlineUsers(w http.ResponseWriter, r *http.Request, ps htt
 		}
 		hub.mutex.RUnlock()
 	}
-	
+
 	// Convert to slice
 	var onlineUsers []string
 	for userID := range onlineUserIDs {
 		onlineUsers = append(onlineUsers, userID)
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(onlineUsers)
+	if err := json.NewEncoder(w).Encode(onlineUsers); err != nil {
+		ctx.Logger.WithError(err).Error("Failed to encode online users response")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func formatUptime(d time.Duration) string {
 	if d < time.Minute {
 		return "Less than a minute"
 	}
-	
+
 	days := int(d.Hours()) / 24
 	hours := int(d.Hours()) % 24
 	minutes := int(d.Minutes()) % 60
