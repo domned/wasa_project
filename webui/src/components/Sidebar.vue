@@ -315,7 +315,18 @@ function getChatDisplayName(chat) {
 		return chat.name || chat.id || 'Unknown Chat';
 	}
 
-	// If group chat (more than 2 participants)
+	// For 1:1 chat, always show the other participant's username (ignore backend-generated names)
+	if (chat.participants.length === 2) {
+		// Find the participant who is not the current user
+		const other = chat.participants.find(
+			(p) => p && p.id && p.id !== props.userId
+		);
+		return other && other.username
+			? other.username
+			: 'Unknown User';
+	}
+
+	// If group chat (more than 2 participants), use the provided name
 	if (chat.participants.length > 2) {
 		if (chat.name && chat.name.trim() !== '') {
 			return chat.name;
@@ -327,18 +338,9 @@ function getChatDisplayName(chat) {
 			.filter(Boolean);
 		return otherUsers.length > 0
 			? otherUsers.join(', ')
-			: chat.name || chat.id || 'Group Chat';
+			: 'Group Chat';
 	}
-	// For 1:1 chat, show the other participant's username
-	if (chat.participants.length === 2) {
-		// Find the participant who is not the current user
-		const other = chat.participants.find(
-			(p) => p && p.id && p.id !== props.userId
-		);
-		return other && other.username
-			? other.username
-			: chat.name || chat.id || 'Unknown User';
-	}
+
 	// Fallback
 	return chat.name || chat.id || 'Unknown Chat';
 }

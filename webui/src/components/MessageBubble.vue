@@ -421,12 +421,7 @@ async function forwardMessage() {
 function getConversationDisplayName(conversation) {
 	const currentUserId = localStorage.getItem('userId');
 
-	// If it's a named group, use the group name
-	if (conversation.name && conversation.name.trim()) {
-		return conversation.name;
-	}
-
-	// For 1:1 chats, show the other participant's name
+	// For 1:1 chats, always show the other participant's name (ignore backend-generated names)
 	if (conversation.participants && conversation.participants.length === 2) {
 		const otherParticipant = conversation.participants.find(
 			(p) => p.id !== currentUserId
@@ -434,8 +429,12 @@ function getConversationDisplayName(conversation) {
 		return otherParticipant ? otherParticipant.username : 'Unknown User';
 	}
 
-	// For group chats without a name, show participant names
+	// For group chats (3+ participants), use the group name if provided
 	if (conversation.participants && conversation.participants.length > 2) {
+		if (conversation.name && conversation.name.trim()) {
+			return conversation.name;
+		}
+		// Otherwise show participant names
 		const otherParticipants = conversation.participants
 			.filter((p) => p.id !== currentUserId)
 			.map((p) => p.username)
