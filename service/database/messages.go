@@ -111,9 +111,8 @@ func (db *appdbimpl) GetConversationMessages(cid string) ([]Message, error) {
 		var sender User
 		var timestamp time.Time
 		var conversationId string
-		err := rows.Scan(&m.Id, &conversationId, &m.Text, &sender.UId, &timestamp, &sender.Username)
-		if err != nil {
-			return nil, err
+		if scanErr := rows.Scan(&m.Id, &conversationId, &m.Text, &sender.UId, &timestamp, &sender.Username); scanErr != nil {
+			return nil, scanErr
 		}
 		m.SenderId = sender.UId
 		m.SenderUsername = sender.Username

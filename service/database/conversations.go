@@ -24,9 +24,8 @@ func (db *appdbimpl) GetAllConversations() ([]Conversation, error) {
 		var participantsJSON string
 		var name sql.NullString
 		var picture sql.NullString
-		err := rows.Scan(&conv.CId, &participantsJSON, &name, &picture)
-		if err != nil {
-			return nil, err
+		if scanErr := rows.Scan(&conv.CId, &participantsJSON, &name, &picture); scanErr != nil {
+			return nil, scanErr
 		}
 		if name.Valid {
 			conv.Name = name.String
@@ -58,9 +57,8 @@ func (db *appdbimpl) GetAllConversations() ([]Conversation, error) {
 		for _, uid := range participantIDs {
 			var user User
 			var upic sql.NullString
-			err := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&user.UId, &user.Username, &upic)
-			if err != nil {
-				return nil, err
+			if qErr := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&user.UId, &user.Username, &upic); qErr != nil {
+				return nil, qErr
 			}
 			if upic.Valid {
 				user.Picture = upic.String
@@ -169,10 +167,9 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 		var lastMsgSenderUsername sql.NullString
 		var lastMsgTime sql.NullInt64
 
-		err := rows.Scan(&conv.CId, &participantsJSON, &name, &picture,
-			&lastMsgId, &lastMsgSenderId, &lastMsgText, &lastMsgImageUrl, &lastMsgSenderUsername, &lastMsgTime)
-		if err != nil {
-			return nil, err
+		if scanErr := rows.Scan(&conv.CId, &participantsJSON, &name, &picture,
+			&lastMsgId, &lastMsgSenderId, &lastMsgText, &lastMsgImageUrl, &lastMsgSenderUsername, &lastMsgTime); scanErr != nil {
+			return nil, scanErr
 		}
 
 		if name.Valid {
@@ -217,9 +214,8 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 			for _, uid := range participantIDs {
 				var u User
 				var upic sql.NullString
-				err := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&u.UId, &u.Username, &upic)
-				if err != nil {
-					return nil, err
+				if qErr := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&u.UId, &u.Username, &upic); qErr != nil {
+					return nil, qErr
 				}
 				if upic.Valid {
 					u.Picture = upic.String
@@ -243,8 +239,8 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 			}
 
 			// Get unread count for this conversation
-			unreadCount, err := db.GetUnreadCount(conv.CId, user.UId)
-			if err == nil {
+			unreadCount, ucErr := db.GetUnreadCount(conv.CId, user.UId)
+			if ucErr == nil {
 				conv.UnreadCount = unreadCount
 			}
 

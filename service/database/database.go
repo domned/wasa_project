@@ -158,7 +158,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		picture TEXT,
 		last_seen INTEGER DEFAULT 0
 	);`
-	if _, err := db.Exec(usersTable); err != nil {
+	_, err = db.Exec(usersTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating users table: %w", err)
 	}
 	conversationsTable := `CREATE TABLE IF NOT EXISTS conversations (
@@ -167,7 +168,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		name TEXT,
 		picture TEXT
 	);`
-	if _, err := db.Exec(conversationsTable); err != nil {
+	_, err = db.Exec(conversationsTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating conversations table: %w", err)
 	}
 
@@ -180,7 +182,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 	);`
-	if _, err := db.Exec(messagesTable); err != nil {
+	_, err = db.Exec(messagesTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating messages table: %w", err)
 	}
 
@@ -192,7 +195,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE,
 		UNIQUE(message_id, sender_id, emoji)
 	);`
-	if _, err := db.Exec(reactionsTable); err != nil {
+	_, err = db.Exec(reactionsTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating reactions table: %w", err)
 	}
 
@@ -203,7 +207,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		comment TEXT NOT NULL,
 		FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE
 	);`
-	if _, err := db.Exec(commentsTable); err != nil {
+	_, err = db.Exec(commentsTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating comments table: %w", err)
 	}
 	contactsTable := `CREATE TABLE IF NOT EXISTS contacts (
@@ -213,7 +218,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
 		FOREIGN KEY(contact_id) REFERENCES users(id) ON DELETE CASCADE
 	);`
-	if _, err := db.Exec(contactsTable); err != nil {
+	_, err = db.Exec(contactsTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating contacts table: %w", err)
 	}
 
@@ -226,7 +232,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
 		UNIQUE(message_id, user_id)
 	);`
-	if _, err := db.Exec(readStatusTable); err != nil {
+	_, err = db.Exec(readStatusTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating read_status table: %w", err)
 	}
 
@@ -249,7 +256,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		level TEXT NOT NULL,
 		message TEXT NOT NULL
 	);`
-	if _, err := db.Exec(systemLogsTable); err != nil {
+	_, err = db.Exec(systemLogsTable)
+	if err != nil {
 		return nil, fmt.Errorf("error creating system_logs table: %w", err)
 	}
 

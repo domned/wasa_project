@@ -292,7 +292,19 @@ async function startConversation(contact) {
 		// Emit event to parent to handle conversation creation
 		emit('conversation-created', conversation);
 	} catch (err) {
-		error.value = 'Failed to start conversation';
+		const resp = err.response;
+		const msg = resp?.data?.message || resp?.data || '';
+		if (resp) {
+			if (resp.status === 400) {
+				error.value = msg || 'Invalid request. Please check the selected contact.';
+			} else if (resp.status === 404) {
+				error.value = msg || 'Contact not found.';
+			} else {
+				error.value = msg || `Server error (${resp.status}). Please try again.`;
+			}
+		} else {
+			error.value = 'Network error. Please check your connection and try again.';
+		}
 		console.error('Failed to start conversation:', err);
 	}
 }

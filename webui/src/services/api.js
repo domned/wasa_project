@@ -36,7 +36,12 @@ export const users = {
 	 * @returns {Promise<{message: string}>}
 	 */
 	async updateUsername(userId, username) {
-		const response = await axios.put(`/users/${userId}`, { username });
+		// Backend expects a raw JSON string for username, not an object
+		const response = await axios.put(
+			`/users/${userId}`,
+			JSON.stringify(username),
+			{ headers: { 'Content-Type': 'application/json' } }
+		);
 		return response.data;
 	},
 

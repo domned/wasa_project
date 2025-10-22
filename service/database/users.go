@@ -42,9 +42,8 @@ func (db *appdbimpl) ListUsers(username string) ([]User, error) {
 	for rows.Next() {
 		var user User
 		var picture sql.NullString
-		err := rows.Scan(&user.UId, &user.Username, &picture)
-		if err != nil {
-			return nil, err
+		if scanErr := rows.Scan(&user.UId, &user.Username, &picture); scanErr != nil {
+			return nil, scanErr
 		}
 		// Handle NULL picture values
 		if picture.Valid {

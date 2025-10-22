@@ -192,6 +192,9 @@
 					<small class="form-text text-muted">
 						3-16 characters allowed
 					</small>
+					<small v-if="isNameTaken" class="text-danger">
+						Username already in use
+					</small>
 				</div>
 				<div v-if="editError" class="alert alert-danger">
 					{{ editError }}
@@ -207,7 +210,7 @@
 				<button
 					class="btn btn-primary"
 					@click="updateUsername"
-					:disabled="isUpdating || newUsername.length < 3"
+					:disabled="isUpdating || newUsername.length < 3 || isNameTaken"
 				>
 					{{ isUpdating ? 'Updating...' : 'Save' }}
 				</button>
@@ -464,6 +467,13 @@ const showEditProfile = ref(false);
 const newUsername = ref('');
 const isUpdating = ref(false);
 const editError = ref('');
+const existingUsernames = ref([]);
+const isNameTaken = computed(() => {
+	if (!newUsername.value || newUsername.value === props.username) return false;
+	return existingUsernames.value.some(
+		(u) => u.toLowerCase() === newUsername.value.toLowerCase()
+	);
+});
 const showPhotoUpload = ref(false);
 const selectedPhoto = ref(null);
 const isUploadingPhoto = ref(false);
@@ -607,26 +617,49 @@ async function updateUsername() {
 		return;
 	}
 
+	// Prevent using an already existing username (client-side check)
+	try {
+		const allUsers = await api.users.listAll();
+		existingUsernames.value = allUsers
+			.filter((u) => u.id !== props.userId)
+			.map((u) => u.username || '')
+			.filter(Boolean);
+		if (isNameTaken.value) {
+			editError.value = 'Username already in use';
+			return;
+		}
+	} catch (e) {
+		// If listing users fails, continue and rely on server-side validation
+	}
+
 	isUpdating.value = true;
 	editError.value = '';
 
 	try {
-		await api.users.updateUsername(props.userId, newUsername.value);
+		const updatedUser = await api.users.updateUsername(
+			props.userId,
+			newUsername.value
+		);
 
 		// Emit event to update username in parent component
-		emit('username-updated', newUsername.value);
+		emit('username-updated', updatedUser.username || newUsername.value);
 
 		// Update localStorage
-		localStorage.setItem('currentUsername', response.data.username);
+		localStorage.setItem(
+			'currentUsername',
+			updatedUser.username || newUsername.value
+		);
 
 		showEditProfile.value = false;
 		newUsername.value = '';
 	} catch (error) {
 		console.error('Failed to update username:', error);
-		if (error.response && error.response.status === 400) {
-			editError.value = error.response.data || 'Username already in use';
+		const resp = error.response;
+		const msg = resp?.data?.message || resp?.data || '';
+		if (resp && resp.status === 400) {
+			editError.value = msg || 'Username already in use';
 		} else {
-			editError.value = 'Failed to update username. Please try again.';
+			editError.value = msg || 'Failed to update username. Please try again.';
 		}
 	} finally {
 		isUpdating.value = false;
@@ -637,6 +670,26 @@ onMounted(() => {
 	fetchChats();
 	applyTheme(); // Apply theme on component mount
 });
+// Load usernames when opening the edit profile modal to prevent duplicates
+watch(
+	() => showEditProfile.value,
+	async (open) => {
+		if (open) {
+			try {
+				const allUsers = await api.users.listAll();
+				existingUsernames.value = allUsers
+					.filter((u) => u.id !== props.userId)
+					.map((u) => u.username || '')
+					.filter(Boolean);
+			} catch (e) {
+				existingUsernames.value = [];
+			}
+		} else {
+			newUsername.value = '';
+			editError.value = '';
+		}
+	}
+);
 watch(() => props.userId, fetchChats);
 
 // Photo upload functions

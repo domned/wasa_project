@@ -36,9 +36,8 @@ func (db *appdbimpl) ListContacts(user User) ([]User, error) {
 	for rows.Next() {
 		var contact User
 		var picture sql.NullString
-		err := rows.Scan(&contact.UId, &contact.Username, &picture)
-		if err != nil {
-			return nil, err
+		if scanErr := rows.Scan(&contact.UId, &contact.Username, &picture); scanErr != nil {
+			return nil, scanErr
 		}
 		// Handle NULL picture values
 		if picture.Valid {

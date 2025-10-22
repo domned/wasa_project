@@ -200,7 +200,8 @@ async function selectChat(chatId) {
 			selectedMessages.value.length > previousMessageCount &&
 			previousMessageCount > 0
 		) {
-			const latestMessage = selectedMessages.value[selectedMessages.value.length - 1];
+			const latestMessage =
+				selectedMessages.value[selectedMessages.value.length - 1];
 			if (!latestMessage.own && sidebarRef.value) {
 				// New message received from someone else, update sidebar
 				sidebarRef.value.updateChatWithNewMessage(chatId, {

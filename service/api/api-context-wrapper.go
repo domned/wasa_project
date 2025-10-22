@@ -82,9 +82,9 @@ func (rt *_router) wrapAuth(fn httpRouterHandler) func(http.ResponseWriter, *htt
 		}
 
 		// Create request context
-		reqUUID, err := uuid.NewV4()
-		if err != nil {
-			rt.baseLogger.WithError(err).Error("can't generate a request UUID")
+		reqUUID, genErr := uuid.NewV4()
+		if genErr != nil {
+			rt.baseLogger.WithError(genErr).Error("can't generate a request UUID")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

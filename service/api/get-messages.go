@@ -46,9 +46,9 @@ func (rt *_router) getMessages(w http.ResponseWriter, r *http.Request, ps httpro
 			var emoji string
 			var count int
 			var usernames string
-			if err := reactionRows.Scan(&emoji, &count, &usernames); err != nil {
+			if scanErr := reactionRows.Scan(&emoji, &count, &usernames); scanErr != nil {
 				reactionRows.Close()
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, scanErr.Error(), http.StatusInternalServerError)
 				return
 			}
 			reactions[emoji] = map[string]interface{}{

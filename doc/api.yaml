@@ -1186,8 +1186,8 @@ paths:
             description: Delete a message (only by the sender)
             operationId: deleteMessage
             responses:
-                '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                '204':
+                    description: Message deleted successfully (no content)
                 '403':
                     description: Not authorized to delete this message
                     content:
@@ -1292,8 +1292,8 @@ paths:
                             $ref: '#/components/schemas/Reaction'
                 required: true
             responses:
-                '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                '201':
+                    description: Reaction toggled successfully (no content)
                 '400':
                     description: Invalid reaction data
                     content:
@@ -1345,8 +1345,8 @@ paths:
             description: Remove a specific reaction from a message
             operationId: removeReaction
             responses:
-                '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                '204':
+                    description: Reaction removed successfully (no content)
                 '404':
                     description: Message or reaction not found
                     content:
@@ -1395,7 +1395,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Comment'
+                                type: string
+                                description: UUID of the created comment
+                                format: uuid
+                                pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                                minLength: 36
+                                maxLength: 36
                 '400':
                     description: Invalid comment data
                     content:
@@ -1445,8 +1450,8 @@ paths:
             description: Delete a comment (only by the commenter)
             operationId: deleteComment
             responses:
-                '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                '204':
+                    description: Comment deleted successfully (no content)
                 '403':
                     description: Not authorized to delete this comment
                     content:
@@ -1604,7 +1609,7 @@ paths:
             description: Health check endpoint for monitoring server status
             operationId: liveness
             responses:
-                '200':
+                '204':
                     description: Server is healthy
 
     /admin/health:
