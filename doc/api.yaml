@@ -19,21 +19,21 @@ info:
 
 tags:
     - name: Authentication
-        description: User authentication and session management
+      description: User authentication and session management
     - name: Users
-        description: User profile management and operations
+      description: User profile management and operations
     - name: Conversations
-        description: Group and conversation management
+      description: Group and conversation management
     - name: Messages
-        description: Message sending, forwarding, and management
+      description: Message sending, forwarding, and management
     - name: Comments
-        description: Emoji comments (reaction-like) and their management
+      description: Emoji comments (reaction-like) and their management
     - name: Contacts
-        description: User contact management
+      description: User contact management
     - name: WebSocket
-        description: Real-time messaging WebSocket connection
+      description: Real-time messaging WebSocket connection
     - name: Health
-        description: Service health monitoring
+      description: Service health monitoring
 
 security:
     - bearerAuth: []
@@ -362,8 +362,6 @@ components:
                     maxLength: 36
             required:
                 - contactUserId
-
-
 
         UpdateUsernameRequest:
             type: object
@@ -1131,7 +1129,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
- 
 
     /users/{id}/contacts:
         parameters:
