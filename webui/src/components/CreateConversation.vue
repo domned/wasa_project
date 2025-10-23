@@ -250,14 +250,18 @@ const createConversation = async () => {
 		let friendly = 'Failed to create conversation.';
 		if (resp) {
 			if (resp.status === 400) {
-				friendly = msg || 'Invalid request. Please check participants and name.';
+				friendly =
+					msg ||
+					'Invalid request. Please check participants and name.';
 			} else if (resp.status === 404) {
 				friendly = msg || 'One or more participants were not found.';
 			} else {
-				friendly = msg || `Server error (${resp.status}). Please try again.`;
+				friendly =
+					msg || `Server error (${resp.status}). Please try again.`;
 			}
 		} else {
-			friendly = 'Network error. Please check your connection and try again.';
+			friendly =
+				'Network error. Please check your connection and try again.';
 		}
 		alert(friendly);
 

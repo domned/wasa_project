@@ -10,74 +10,6 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-// GetAllConversations returns all conversations in the database (for user picker)
-func (db *appdbimpl) GetAllConversations() ([]Conversation, error) {
-	rows, err := db.c.Query("SELECT id, participants, name, picture FROM conversations")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var conversations []Conversation
-	for rows.Next() {
-		var conv Conversation
-		var participantsJSON string
-		var name sql.NullString
-		var picture sql.NullString
-		if scanErr := rows.Scan(&conv.CId, &participantsJSON, &name, &picture); scanErr != nil {
-			return nil, scanErr
-		}
-		if name.Valid {
-			conv.Name = name.String
-		} else {
-			conv.Name = ""
-		}
-		if picture.Valid {
-			conv.Picture = picture.String
-		} else {
-			conv.Picture = ""
-		}
-		var participantIDs []string
-
-		// Try to unmarshal as string array first (new format)
-		err = json.Unmarshal([]byte(participantsJSON), &participantIDs)
-		if err != nil {
-			// If that fails, try to unmarshal as User object array (old format)
-			var participantObjects []User
-			err = json.Unmarshal([]byte(participantsJSON), &participantObjects)
-			if err != nil {
-				return nil, err
-			}
-			// Extract IDs from User objects
-			for _, participant := range participantObjects {
-				participantIDs = append(participantIDs, participant.UId)
-			}
-		}
-		var participants []User
-		for _, uid := range participantIDs {
-			var user User
-			var upic sql.NullString
-			if qErr := db.c.QueryRow("SELECT id, username, picture FROM users WHERE id = ?", uid).Scan(&user.UId, &user.Username, &upic); qErr != nil {
-				return nil, qErr
-			}
-			if upic.Valid {
-				user.Picture = upic.String
-			} else {
-				user.Picture = ""
-			}
-			participants = append(participants, user)
-		}
-		conv.Participants = participants
-		conversations = append(conversations, conv)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return conversations, nil
-}
-
 var demoNames = []string{"Alice & Bob", "Charlie Group", "Delta Squad", "Echo Team", "Foxtrot Chat"}
 var demoAvatars = []string{
 	"https://randomuser.me/api/portraits/men/1.jpg",
@@ -138,16 +70,16 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 			m.message as last_msg_text,
 			COALESCE(m.image_url, '') as last_msg_image_url,
 			u.username as last_msg_sender_username,
-			m.rowid as last_msg_time
+			CAST((julianday(m.timestamp) - 2440587.5) * 86400000 AS INTEGER) as last_msg_time
 		FROM conversations c
 		LEFT JOIN (
-			SELECT conversation_id, MAX(rowid) as max_rowid
+			SELECT conversation_id, MAX(timestamp) as max_timestamp
 			FROM messages 
 			GROUP BY conversation_id
 		) latest ON c.id = latest.conversation_id
-		LEFT JOIN messages m ON latest.conversation_id = m.conversation_id AND latest.max_rowid = m.rowid
+		LEFT JOIN messages m ON latest.conversation_id = m.conversation_id AND latest.max_timestamp = m.timestamp
 		LEFT JOIN users u ON m.sender_id = u.id
-		ORDER BY COALESCE(m.rowid, 0) DESC`)
+		ORDER BY m.timestamp DESC NULLS LAST`)
 
 	if err != nil {
 		return nil, err

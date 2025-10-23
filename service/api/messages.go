@@ -222,8 +222,8 @@ func (rt *_router) reactToMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
-	// Return success response
-	w.WriteHeader(http.StatusCreated)
+	// Return success response (no content)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (rt *_router) removeReaction(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -256,106 +256,4 @@ func (rt *_router) removeReaction(w http.ResponseWriter, r *http.Request, ps htt
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
-	// Get parameters from URL
-	userId := ps.ByName("id")
-	conversationId := ps.ByName("conversationId")
-	messageId := ps.ByName("messageId")
-
-	if userId == "" || conversationId == "" || messageId == "" {
-		http.Error(w, "missing required parameters", http.StatusBadRequest)
-		return
-	}
-
-	// Parse request body for comment
-	var requestBody struct {
-		Comment string `json:"comment"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-		ctx.Logger.WithError(err).Error("failed to decode request body")
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if requestBody.Comment == "" {
-		http.Error(w, "comment cannot be empty", http.StatusBadRequest)
-		return
-	}
-
-	// Validate message exists
-	var messageExists int
-	err := rt.db.GetRawDB().QueryRow(
-		"SELECT COUNT(*) FROM messages WHERE id = ? AND conversation_id = ?",
-		messageId, conversationId).Scan(&messageExists)
-	if err != nil || messageExists == 0 {
-		http.Error(w, "message not found", http.StatusNotFound)
-		return
-	}
-
-	// Generate comment ID
-	commentId, err := uuid.NewV4()
-	if err != nil {
-		ctx.Logger.WithError(err).Error("failed to generate comment ID")
-		http.Error(w, "failed to generate comment ID", http.StatusInternalServerError)
-		return
-	}
-
-	// Insert comment
-	_, err = rt.db.GetRawDB().Exec(
-		"INSERT INTO comments (id, message_id, sender_id, comment) VALUES (?, ?, ?, ?)",
-		commentId.String(), messageId, userId, requestBody.Comment)
-	if err != nil {
-		ctx.Logger.WithError(err).Error("failed to add comment")
-		http.Error(w, "failed to add comment", http.StatusInternalServerError)
-		return
-	}
-
-	// Return comment ID
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(commentId.String()); err != nil {
-		ctx.Logger.WithError(err).Error("failed to encode comment response")
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-}
-
-func (rt *_router) deleteComment(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
-	// Get parameters from URL
-	userId := ps.ByName("id")
-	conversationId := ps.ByName("conversationId")
-	messageId := ps.ByName("messageId")
-	commentId := ps.ByName("commentId")
-
-	if userId == "" || conversationId == "" || messageId == "" || commentId == "" {
-		http.Error(w, "missing required parameters", http.StatusBadRequest)
-		return
-	}
-
-	// Check if comment exists and belongs to the user
-	var senderId string
-	err := rt.db.GetRawDB().QueryRow(
-		"SELECT sender_id FROM comments WHERE id = ? AND message_id = ?",
-		commentId, messageId).Scan(&senderId)
-	if err != nil {
-		http.Error(w, "comment not found", http.StatusNotFound)
-		return
-	}
-
-	// Check if user is the sender of the comment
-	if senderId != userId {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Delete the comment
-	_, err = rt.db.GetRawDB().Exec("DELETE FROM comments WHERE id = ?", commentId)
-	if err != nil {
-		ctx.Logger.WithError(err).Error("failed to delete comment")
-		http.Error(w, "failed to delete comment", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
+// Comments feature removed (emoji reactions only)

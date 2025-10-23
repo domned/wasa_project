@@ -10,7 +10,7 @@ info:
         Features include:
         - Real-time messaging with WebSocket support
         - Image messaging with automatic compression
-        - Message reactions with toggle behavior (prevents duplicates)
+        - Emoji comments with toggle behavior (prevents duplicates)
         - Group chat management
         - Contact management
         - Message forwarding (including images)
@@ -19,23 +19,21 @@ info:
 
 tags:
     - name: Authentication
-      description: User authentication and session management
+        description: User authentication and session management
     - name: Users
-      description: User profile management and operations
+        description: User profile management and operations
     - name: Conversations
-      description: Group and conversation management
+        description: Group and conversation management
     - name: Messages
-      description: Message sending, forwarding, and management
-    - name: Reactions
-      description: Message reactions and emoji management
+        description: Message sending, forwarding, and management
     - name: Comments
-      description: Message comments management
+        description: Emoji comments (reaction-like) and their management
     - name: Contacts
-      description: User contact management
+        description: User contact management
     - name: WebSocket
-      description: Real-time messaging WebSocket connection
+        description: Real-time messaging WebSocket connection
     - name: Health
-      description: Service health monitoring
+        description: Service health monitoring
 
 security:
     - bearerAuth: []
@@ -115,13 +113,26 @@ components:
                     description: List of users in the conversation
                     minItems: 1
                     maxItems: 100
+                lastMessage:
+                    $ref: '#/components/schemas/Message'
+                lastMessageTime:
+                    type: string
+                    description: Unix time in milliseconds as a string
+                    pattern: '^\d{1,13}$'
+                    example: '1730000123456'
+                    minLength: 1
+                    maxLength: 13
+                unreadCount:
+                    type: integer
+                    minimum: 0
+                    example: 0
             required:
                 - id
                 - participants
 
         Message:
             type: object
-            description: Represents a message in a conversation with text, images, reactions, and metadata
+            description: Represents a message in a conversation with text, images, emoji comments, and metadata
             properties:
                 id:
                     type: string
@@ -166,7 +177,7 @@ components:
                     pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$'
                     minLength: 19
                     maxLength: 24
-                reactions:
+                comments:
                     type: object
                     additionalProperties:
                         type: object
@@ -176,78 +187,37 @@ components:
                                 example: 3
                                 minimum: 1
                                 maximum: 10000
-                                description: Number of users who reacted with this emoji
+                                description: Number of users who commented with this emoji
                             users:
-                                type: array
-                                items:
-                                    type: string
-                                    pattern: '^.*$'
-                                    minLength: 3
-                                    maxLength: 16
-                                    description: Username of a user who reacted
-                                example: ['Alice', 'Bob']
-                                minItems: 1
-                                maxItems: 50
-                                description: List of usernames who reacted with this emoji
+                                type: string
+                                example: 'Alice,Bob'
+                                description: Comma-separated list of usernames who commented with this emoji
+                                minLength: 3
+                                maxLength: 20
                     description: >-
-                        Reactions to the message (emoji -> reaction data)
+                        Emoji comments on the message (emoji -> comment data)
+                isRead:
+                    type: boolean
+                    description: Whether the message is considered read from the sender's perspective
             required:
                 - id
                 - senderId
                 - senderUsername
                 - time
 
-        Reaction:
+        Comment:
             type: object
-            description: Represents an emoji reaction to toggle on a message
+            description: Represents an emoji comment (emoji reaction) to toggle on a message
             properties:
                 emoji:
                     type: string
                     example: '👍'
-                    description: The emoji reaction to toggle (add if not present, remove if already exists)
+                    description: The emoji to toggle (add if not present, remove if already exists)
                     pattern: '^.{1,10}$'
                     minLength: 1
                     maxLength: 10
             required:
                 - emoji
-
-        Comment:
-            type: object
-            description: Represents a comment on a specific message
-            properties:
-                id:
-                    type: string
-                    example: 'comment-uuid'
-                    description: UUID of the comment
-                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                    minLength: 36
-                    maxLength: 36
-                messageId:
-                    type: string
-                    example: 'message-uuid'
-                    description: UUID of the parent message
-                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                    minLength: 36
-                    maxLength: 36
-                senderId:
-                    type: string
-                    example: 'user-uuid'
-                    description: UUID of the comment sender
-                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                    minLength: 36
-                    maxLength: 36
-                content:
-                    type: string
-                    example: 'Great point!'
-                    description: Content of the comment
-                    pattern: '^.*$'
-                    minLength: 1
-                    maxLength: 500
-            required:
-                - id
-                - messageId
-                - senderId
-                - content
 
         Contact:
             type: object
@@ -360,7 +330,7 @@ components:
                     description: >-
                         Name for the conversation (optional for 1:1 chats)
                     pattern: '^.*$'
-                    minLength: 1
+                    minLength: 0
                     maxLength: 100
             required:
                 - participants
@@ -393,19 +363,7 @@ components:
             required:
                 - contactUserId
 
-        CommentRequest:
-            type: object
-            description: Request payload for adding a comment to a message
-            properties:
-                content:
-                    type: string
-                    example: 'Great message!'
-                    description: Content of the comment
-                    pattern: '^.*$'
-                    minLength: 1
-                    maxLength: 500
-            required:
-                - content
+
 
         UpdateUsernameRequest:
             type: object
@@ -434,141 +392,6 @@ components:
                     maxLength: 500
             required:
                 - message
-
-        AdminHealthResponse:
-            type: object
-            description: System health status response for administrative monitoring
-            properties:
-                database:
-                    type: string
-                    example: 'Healthy'
-                    description: Database connection health status
-                    pattern: '^(Healthy|Error|Unknown)$'
-                    minLength: 5
-                    maxLength: 10
-                websocket:
-                    type: string
-                    example: 'Active'
-                    description: WebSocket connection health status
-                    pattern: '^(Active|Idle|Not initialized|Error)$'
-                    minLength: 4
-                    maxLength: 15
-                api:
-                    type: string
-                    example: 'Running'
-                    description: API service health status
-                    pattern: '^(Running|Error|Stopped)$'
-                    minLength: 5
-                    maxLength: 8
-                uptime:
-                    type: string
-                    example: '2 days, 14 hours, 32 minutes'
-                    description: Server uptime in human-readable format
-                    pattern: '^.*$'
-                    minLength: 1
-                    maxLength: 100
-            required:
-                - database
-                - websocket
-                - api
-                - uptime
-
-        AdminStatsResponse:
-            type: object
-            description: System statistics response for administrative monitoring
-            properties:
-                total_users:
-                    type: integer
-                    example: 150
-                    description: Total number of users in the system
-                    minimum: 0
-                    maximum: 1000000
-                active_users:
-                    type: integer
-                    example: 23
-                    description: Number of users active in the last 24 hours
-                    minimum: 0
-                    maximum: 1000000
-                total_conversations:
-                    type: integer
-                    example: 87
-                    description: Total number of conversations in the system
-                    minimum: 0
-                    maximum: 1000000
-                total_messages:
-                    type: integer
-                    example: 2341
-                    description: Total number of messages sent in the system
-                    minimum: 0
-                    maximum: 10000000
-                active_connections:
-                    type: integer
-                    example: 12
-                    description: Number of active WebSocket connections
-                    minimum: 0
-                    maximum: 10000
-                error_rate:
-                    type: number
-                    format: float
-                    example: 0.01
-                    description: Current system error rate (0.0 to 1.0)
-                    minimum: 0.0
-                    maximum: 1.0
-            required:
-                - total_users
-                - active_users
-                - total_conversations
-                - total_messages
-                - active_connections
-                - error_rate
-
-        LogEntry:
-            type: object
-            description: System log entry for administrative monitoring
-            properties:
-                id:
-                    type: integer
-                    example: 12345
-                    description: Unique identifier for the log entry
-                    minimum: 1
-                level:
-                    type: string
-                    example: 'INFO'
-                    description: Log level (DEBUG, INFO, WARN, ERROR, FATAL)
-                    pattern: '^(DEBUG|INFO|WARN|ERROR|FATAL)$'
-                    minLength: 4
-                    maxLength: 5
-                message:
-                    type: string
-                    example: 'User logged in successfully'
-                    description: Log message content
-                    pattern: '^.*$'
-                    minLength: 1
-                    maxLength: 1000
-                timestamp:
-                    type: string
-                    format: date-time
-                    example: '2025-01-15T14:30:00Z'
-                    description: Timestamp when the log entry was created
-            required:
-                - id
-                - level
-                - message
-                - timestamp
-
-        AdminLogsResponse:
-            type: object
-            description: System logs response for administrative monitoring
-            properties:
-                logs:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/LogEntry'
-                    description: Array of recent system log entries
-                    minItems: 0
-                    maxItems: 100
-            required:
-                - logs
 
     responses:
         SuccessMessage:
@@ -630,16 +453,30 @@ paths:
                                     name:
                                         type: string
                                         example: 'WASAText API'
+                                        description: Name of the API service
+                                        minLength: 3
+                                        maxLength: 50
                                     version:
                                         type: string
                                         example: '1.2.0'
+                                        description: Current API version
+                                        minLength: 1
+                                        maxLength: 10
                                     status:
                                         type: string
                                         example: 'running'
+                                        description: Current API status
+                                        minLength: 3
+                                        maxLength: 20
                                     endpoints:
                                         type: integer
-                                        example: 26
+                                        example: 22
                                         description: Number of available API endpoints
+                                required:
+                                    - name
+                                    - version
+                                    - status
+                                    - endpoints
 
     /session:
         post:
@@ -706,6 +543,8 @@ paths:
               schema:
                   type: string
                   format: uuid
+                  minLength: 36
+                  maxLength: 36
         put:
             tags: ['Users']
             summary: Update username
@@ -716,11 +555,19 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/UpdateUsernameRequest'
+                            type: string
+                            description: New username for the user
+                            pattern: '^[a-zA-Z0-9_]+$'
+                            minLength: 3
+                            maxLength: 16
                 required: true
             responses:
                 '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                    description: Updated user
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
                 '400':
                     description: Invalid username format
                     content:
@@ -745,6 +592,8 @@ paths:
               schema:
                   type: string
                   format: uuid
+                  minLength: 36
+                  maxLength: 36
         put:
             tags: ['Users']
             summary: Update user photo
@@ -764,7 +613,11 @@ paths:
                 required: true
             responses:
                 '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                    description: Updated user
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
                 '400':
                     description: Invalid photo URL
                     content:
@@ -787,6 +640,8 @@ paths:
               schema:
                   type: string
                   format: uuid
+                  minLength: 36
+                  maxLength: 36
         get:
             tags: ['Users']
             summary: Get user context
@@ -796,18 +651,11 @@ paths:
                 '200':
                     description: User context retrieved successfully
                     content:
-                        application/json:
+                        text/plain:
                             schema:
-                                type: object
-                                description: User context information
-                                properties:
-                                    context:
-                                        type: string
-                                        description: Context information for the user
-                                        pattern: '^.*$'
-                                        minLength: 0
-                                        maxLength: 1000
-                                        example: 'User is active and has recent messages'
+                                type: string
+                                minLength: 0
+                                maxLength: 10000
                 '404':
                     description: User not found
                     content:
@@ -824,6 +672,8 @@ paths:
               schema:
                   type: string
                   format: uuid
+                  minLength: 36
+                  maxLength: 36
         get:
             tags: ['Conversations']
             summary: Get user conversations
@@ -878,112 +728,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-
-    /users/{id}/conversations/{conversationId}:
-        parameters:
-            - name: id
-              in: path
-              description: UUID of the user
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-            - name: conversationId
-              in: path
-              description: UUID of the conversation
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-        get:
-            tags: ['Conversations']
-            summary: Get conversation details
-            description: Get details of a specific conversation
-            operationId: getConversation
-            responses:
-                '200':
-                    description: Conversation details
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Conversation'
-                '404':
-                    description: Conversation not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
-    /users/{id}/conversations/{conversationId}/members:
-        parameters:
-            - name: id
-              in: path
-              description: UUID of the user
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-            - name: conversationId
-              in: path
-              description: UUID of the conversation
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-        post:
-            tags: ['Conversations']
-            summary: Add member to group
-            description: Add a new member to an existing group conversation
-            operationId: addtoGroup
-            requestBody:
-                description: User ID to add to the group
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            description: Request to add a user to a group conversation
-                            properties:
-                                userId:
-                                    type: string
-                                    format: uuid
-                                    description: UUID of the user to add to the group
-                                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                                    minLength: 36
-                                    maxLength: 36
-                                    example: 'f2555a8a-2e66-4326-9588-20e7e298d615'
-                            required:
-                                - userId
-                required: true
-            responses:
-                '200':
-                    $ref: '#/components/responses/SuccessMessage'
-                '400':
-                    description: Invalid request data
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                '404':
-                    description: Conversation or user not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-        delete:
-            tags: ['Conversations']
-            summary: Leave group
-            description: Remove the user from the group conversation
-            operationId: leaveGroup
-            responses:
-                '200':
-                    $ref: '#/components/responses/SuccessMessage'
-                '404':
-                    description: Conversation not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
     /users/{id}/conversations/{conversationId}/name:
         parameters:
             - name: id
@@ -992,6 +736,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: conversationId
               in: path
@@ -999,6 +745,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
         put:
             tags: ['Conversations']
@@ -1019,7 +767,7 @@ paths:
                 required: true
             responses:
                 '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                    description: Group name updated successfully
                 '400':
                     description: Invalid group name
                     content:
@@ -1041,6 +789,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: conversationId
               in: path
@@ -1068,7 +818,7 @@ paths:
                 required: true
             responses:
                 '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                    description: Group photo updated successfully
                 '400':
                     description: Invalid photo URL
                     content:
@@ -1090,6 +840,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: conversationId
               in: path
@@ -1097,6 +849,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
         get:
             tags: ['Messages']
@@ -1165,6 +919,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: conversationId
               in: path
@@ -1172,6 +928,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: messageId
               in: path
@@ -1179,6 +937,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
         delete:
             tags: ['Messages']
@@ -1188,7 +948,7 @@ paths:
             responses:
                 '204':
                     description: Message deleted successfully (no content)
-                '403':
+                '401':
                     description: Not authorized to delete this message
                     content:
                         application/json:
@@ -1209,6 +969,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: conversationId
               in: path
@@ -1216,6 +978,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: messageId
               in: path
@@ -1223,6 +987,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
         post:
             tags: ['Messages']
@@ -1256,104 +1022,6 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Error'
 
-    /users/{id}/conversations/{conversationId}/messages/{messageId}/reaction:
-        parameters:
-            - name: id
-              in: path
-              description: UUID of the user
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-            - name: conversationId
-              in: path
-              description: UUID of the conversation
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-            - name: messageId
-              in: path
-              description: UUID of the message
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-        post:
-            tags: ['Reactions']
-            summary: Toggle reaction
-            description: Toggle a reaction on a message. If the user has already reacted with this emoji, the reaction will be removed. If not, it will be added.
-            operationId: reactToMessage
-            requestBody:
-                description: Emoji to toggle
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/Reaction'
-                required: true
-            responses:
-                '201':
-                    description: Reaction toggled successfully (no content)
-                '400':
-                    description: Invalid reaction data
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                '404':
-                    description: Message not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
-    /users/{id}/conversations/{conversationId}/messages/{messageId}/reaction/{emoji}:
-        parameters:
-            - name: id
-              in: path
-              description: UUID of the user
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-            - name: conversationId
-              in: path
-              description: UUID of the conversation
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-            - name: messageId
-              in: path
-              description: UUID of the message
-              required: true
-              schema:
-                  type: string
-                  format: uuid
-            - name: emoji
-              in: path
-              description: The emoji reaction to remove
-              required: true
-              schema:
-                  type: string
-                  pattern: '^.{1,10}$'
-                  minLength: 1
-                  maxLength: 10
-        delete:
-            tags: ['Reactions']
-            summary: Remove reaction
-            description: Remove a specific reaction from a message
-            operationId: removeReaction
-            responses:
-                '204':
-                    description: Reaction removed successfully (no content)
-                '404':
-                    description: Message or reaction not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
     /users/{id}/conversations/{conversationId}/messages/{messageId}/comments:
         parameters:
             - name: id
@@ -1362,6 +1030,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: conversationId
               in: path
@@ -1369,6 +1039,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: messageId
               in: path
@@ -1376,31 +1048,24 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
         post:
             tags: ['Comments']
-            summary: Add comment
-            description: Add a comment to a message
-            operationId: commentMessage
+            summary: Toggle comment (emoji)
+            description: Toggle an emoji comment on a message. If the user has already commented with this emoji, it will be removed. If not, it will be added.
+            operationId: reactToMessage
             requestBody:
-                description: Comment content
+                description: Emoji to toggle
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/CommentRequest'
+                            $ref: '#/components/schemas/Comment'
                 required: true
             responses:
-                '201':
-                    description: Comment added successfully
-                    content:
-                        application/json:
-                            schema:
-                                type: string
-                                description: UUID of the created comment
-                                format: uuid
-                                pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                                minLength: 36
-                                maxLength: 36
+                '204':
+                    description: Comment toggled successfully (no content)
                 '400':
                     description: Invalid comment data
                     content:
@@ -1414,7 +1079,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Error'
 
-    /users/{id}/conversations/{conversationId}/messages/{messageId}/comments/{commentId}:
+    /users/{id}/conversations/{conversationId}/messages/{messageId}/comments/{emoji}:
         parameters:
             - name: id
               in: path
@@ -1422,6 +1087,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: conversationId
               in: path
@@ -1429,6 +1096,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: messageId
               in: path
@@ -1436,34 +1105,33 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
-            - name: commentId
+            - name: emoji
               in: path
-              description: UUID of the comment
+              description: The emoji reaction to remove
               required: true
               schema:
                   type: string
-                  format: uuid
+                  pattern: '^.{1,10}$'
+                  minLength: 1
+                  maxLength: 10
         delete:
             tags: ['Comments']
-            summary: Delete comment
-            description: Delete a comment (only by the commenter)
-            operationId: deleteComment
+            summary: Remove comment (emoji)
+            description: Remove a specific emoji comment from a message
+            operationId: removeReaction
             responses:
                 '204':
-                    description: Comment deleted successfully (no content)
-                '403':
-                    description: Not authorized to delete this comment
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
+                    description: Comment removed successfully (no content)
                 '404':
-                    description: Comment not found
+                    description: Message or emoji comment not found
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+ 
 
     /users/{id}/contacts:
         parameters:
@@ -1473,6 +1141,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
         get:
             tags: ['Contacts']
@@ -1536,6 +1206,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
             - name: contactId
               in: path
@@ -1543,6 +1215,8 @@ paths:
               required: true
               schema:
                   type: string
+                  minLength: 36
+                  maxLength: 36
                   format: uuid
         delete:
             tags: ['Contacts']
@@ -1550,36 +1224,10 @@ paths:
             description: Remove a contact from the user's contact list
             operationId: removeContact
             responses:
-                '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                '204':
+                    description: Contact removed successfully (no content)
                 '404':
                     description: Contact not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
-    /conversations/all:
-        get:
-            tags: ['Conversations']
-            summary: Get all conversations
-            description: >-
-                Returns all conversations in the database (for admin or
-                user picker)
-            operationId: getAllConversations
-            responses:
-                '200':
-                    description: List of all conversations
-                    content:
-                        application/json:
-                            schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/Conversation'
-                                minItems: 0
-                                maxItems: 10000
-                '500':
-                    description: Internal server error
                     content:
                         application/json:
                             schema:
@@ -1609,120 +1257,5 @@ paths:
             description: Health check endpoint for monitoring server status
             operationId: liveness
             responses:
-                '204':
+                '200':
                     description: Server is healthy
-
-    /admin/health:
-        get:
-            tags: ['Health']
-            summary: System health status
-            description: Returns detailed system health information for administrative monitoring
-            operationId: getAdminHealth
-            security:
-                - bearerAuth: []
-            responses:
-                '200':
-                    description: System health status retrieved successfully
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AdminHealthResponse'
-                '401':
-                    $ref: '#/components/responses/UnauthorizedError'
-                '500':
-                    description: Internal server error
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
-    /admin/stats:
-        get:
-            tags: ['Health']
-            summary: System statistics
-            description: Returns detailed system statistics for administrative monitoring
-            operationId: getAdminStats
-            security:
-                - bearerAuth: []
-            responses:
-                '200':
-                    description: System statistics retrieved successfully
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AdminStatsResponse'
-                '401':
-                    $ref: '#/components/responses/UnauthorizedError'
-                '500':
-                    description: Internal server error
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
-    /admin/logs:
-        get:
-            tags: ['Health']
-            summary: System logs
-            description: Returns recent system log entries for administrative monitoring
-            operationId: getAdminLogs
-            security:
-                - bearerAuth: []
-            parameters:
-                - name: limit
-                  in: query
-                  description: Maximum number of log entries to return
-                  required: false
-                  schema:
-                      type: integer
-                      minimum: 1
-                      maximum: 100
-                      default: 50
-            responses:
-                '200':
-                    description: System logs retrieved successfully
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/AdminLogsResponse'
-                '401':
-                    $ref: '#/components/responses/UnauthorizedError'
-                '500':
-                    description: Internal server error
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-
-    /admin/online-users:
-        get:
-            tags: ['Users']
-            summary: Online users
-            description: Returns list of currently online user IDs based on active WebSocket connections
-            operationId: getOnlineUsers
-            security:
-                - bearerAuth: []
-            responses:
-                '200':
-                    description: Online users list retrieved successfully
-                    content:
-                        application/json:
-                            schema:
-                                type: array
-                                items:
-                                    type: string
-                                    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                                    minLength: 36
-                                    maxLength: 36
-                                    description: UUID of an online user
-                                minItems: 0
-                                maxItems: 1000
-                                description: List of UUIDs of currently online users
-                '401':
-                    $ref: '#/components/responses/UnauthorizedError'
-                '500':
-                    description: Internal server error
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'

@@ -296,14 +296,18 @@ async function startConversation(contact) {
 		const msg = resp?.data?.message || resp?.data || '';
 		if (resp) {
 			if (resp.status === 400) {
-				error.value = msg || 'Invalid request. Please check the selected contact.';
+				error.value =
+					msg ||
+					'Invalid request. Please check the selected contact.';
 			} else if (resp.status === 404) {
 				error.value = msg || 'Contact not found.';
 			} else {
-				error.value = msg || `Server error (${resp.status}). Please try again.`;
+				error.value =
+					msg || `Server error (${resp.status}). Please try again.`;
 			}
 		} else {
-			error.value = 'Network error. Please check your connection and try again.';
+			error.value =
+				'Network error. Please check your connection and try again.';
 		}
 		console.error('Failed to start conversation:', err);
 	}

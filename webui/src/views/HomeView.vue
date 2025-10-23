@@ -126,7 +126,7 @@ export default {
 							<li>
 								✅ Image messaging with automatic compression
 							</li>
-							<li>✅ Message reactions with toggle behavior</li>
+							<li>✅ Emoji comments with toggle behavior</li>
 							<li>✅ Group chat management</li>
 							<li>✅ Contact management</li>
 							<li>✅ Message forwarding (including images)</li>

@@ -142,9 +142,9 @@ func (db *appdbimpl) ReactToMessage(cid string, user User, mid string, emoji str
 	return db.GetConversation(cid)
 }
 
-func (db *appdbimpl) RemoveReaction(cid string, user User, mid string, reactionId string) (Conversation, error) {
-	_, err := db.c.Exec("DELETE FROM reactions WHERE id = ? AND sender_id = ?",
-		reactionId, user.UId)
+func (db *appdbimpl) RemoveReaction(cid string, user User, mid string, emoji string) (Conversation, error) {
+	_, err := db.c.Exec("DELETE FROM reactions WHERE message_id = ? AND sender_id = ? AND emoji = ?",
+		mid, user.UId, emoji)
 	if err != nil {
 		return Conversation{}, err
 	}

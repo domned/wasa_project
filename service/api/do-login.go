@@ -45,10 +45,6 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 		rt.sysLogger.LogInfo("New user " + req.Name + " registered and logged in")
 	}
 
-	// Update last seen timestamp
-	if err := rt.db.UpdateUserLastSeen(user.UId); err != nil {
-		rt.sysLogger.LogWarn("Failed to update last_seen for user " + req.Name + ": " + err.Error())
-	}
 	resp := map[string]string{"identifier": user.UId}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

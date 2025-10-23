@@ -68,27 +68,27 @@
 				</button>
 			</div>
 
-			<!-- Reactions display -->
-			<div v-if="hasReactions" class="reactions mt-1">
+			<!-- Emoji comments display -->
+			<div v-if="hasComments" class="reactions mt-1">
 				<span
-					v-for="(reaction, emoji) in msg.reactions"
+					v-for="(reaction, emoji) in msg.comments"
 					:key="emoji"
 					class="reaction-badge"
 					:class="{ 'user-reacted': userHasReacted(emoji) }"
-					:title="getReactionTooltip(emoji, reaction)"
-					@click="toggleReaction(emoji)"
+					:title="getCommentTooltip(emoji, reaction)"
+					@click="toggleComment(emoji)"
 				>
 					{{ emoji }} {{ reaction.count }}
 				</span>
 			</div>
 
-			<!-- Reaction picker -->
+			<!-- Emoji comment picker -->
 			<div class="reaction-actions mt-1">
 				<button
 					v-if="!showReactionPicker"
 					class="btn btn-sm btn-link reaction-btn"
 					@click="showReactionPicker = true"
-					title="Add reaction"
+					title="Add emoji comment"
 				>
 					😊
 				</button>
@@ -97,7 +97,7 @@
 						v-for="emoji in availableEmojis"
 						:key="emoji"
 						class="emoji-option"
-						@click="addReaction(emoji)"
+						@click="addComment(emoji)"
 					>
 						{{ emoji }}
 					</span>
@@ -110,68 +110,7 @@
 				</div>
 			</div>
 
-			<!-- Comments section -->
-			<div class="comments-section mt-2">
-				<!-- Comments toggle button -->
-				<button
-					class="btn btn-sm btn-link comments-toggle"
-					@click="toggleComments"
-					:title="showComments ? 'Hide comments' : 'Show comments'"
-				>
-					💬 {{ commentCount }}
-					{{ commentCount === 1 ? 'comment' : 'comments' }}
-				</button>
-
-				<!-- Comments list -->
-				<div v-if="showComments" class="comments-list mt-2">
-					<div
-						v-for="comment in comments"
-						:key="comment.id"
-						class="comment-item"
-					>
-						<div class="comment-header">
-							<span class="comment-author">{{
-								comment.author.username
-							}}</span>
-							<span class="comment-time">{{
-								formatTime(comment.timestamp)
-							}}</span>
-							<button
-								v-if="canDeleteComment(comment)"
-								class="btn btn-sm btn-link comment-delete"
-								@click="deleteComment(comment.id)"
-								title="Delete comment"
-							>
-								✕
-							</button>
-						</div>
-						<div class="comment-text">{{ comment.text }}</div>
-					</div>
-
-					<!-- Add comment form -->
-					<div class="add-comment-form mt-2">
-						<div class="comment-input-group">
-							<input
-								v-model="newCommentText"
-								type="text"
-								class="form-control form-control-sm"
-								placeholder="Add a comment..."
-								@keyup.enter="addComment"
-								maxlength="500"
-							/>
-							<button
-								class="btn btn-sm btn-primary"
-								@click="addComment"
-								:disabled="
-									!newCommentText.trim() || isAddingComment
-								"
-							>
-								{{ isAddingComment ? 'Adding...' : 'Send' }}
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
+			<!-- Comments removed: emoji reactions only -->
 		</div>
 	</div>
 
@@ -202,32 +141,14 @@ const props = defineProps({
 	chat: Object,
 });
 
-const emit = defineEmits([
-	'reaction-changed',
-	'message-deleted',
-	'comment-added',
-	'comment-deleted',
-]);
+const emit = defineEmits(['reaction-changed', 'message-deleted']);
 
 const showReactionPicker = ref(false);
 const showImageModal = ref(false);
-const showComments = ref(false);
-const comments = ref([]);
-const newCommentText = ref('');
-const isAddingComment = ref(false);
+// Comments removed
 const currentUserId = localStorage.getItem('userId');
 
-// Initialize comments from message data when component mounts or message changes
-function initializeComments() {
-	if (props.msg.comments && Array.isArray(props.msg.comments)) {
-		comments.value = props.msg.comments;
-	} else {
-		comments.value = [];
-	}
-}
-
-// Watch for message prop changes and reinitialize comments
-watch(() => props.msg, initializeComments, { immediate: true, deep: true });
+// Comments removed
 
 function openImageModal() {
 	showImageModal.value = true;
@@ -249,9 +170,9 @@ const isGroupChat = computed(() => {
 	);
 });
 
-// Check if message has reactions
-const hasReactions = computed(() => {
-	return props.msg.reactions && Object.keys(props.msg.reactions).length > 0;
+// Check if message has emoji comments
+const hasComments = computed(() => {
+	return props.msg.comments && Object.keys(props.msg.comments).length > 0;
 });
 
 // Generate a consistent color for each sender based on their username
@@ -269,10 +190,10 @@ const senderColor = computed(() => {
 	return `hsl(${hue}, 65%, 45%)`;
 });
 
-// Check if current user has reacted with specific emoji
+// Check if current user has commented with specific emoji
 function userHasReacted(emoji) {
 	const currentUsername = getCurrentUsername();
-	const reaction = props.msg.reactions[emoji];
+	const reaction = props.msg.comments[emoji];
 	return (
 		reaction && reaction.users && reaction.users.includes(currentUsername)
 	);
@@ -285,30 +206,30 @@ function getCurrentUsername() {
 	return localStorage.getItem('currentUsername') || 'Alice'; // Default fallback
 }
 
-// Get tooltip text for reaction
-function getReactionTooltip(emoji, reaction) {
+// Get tooltip text for emoji comment
+function getCommentTooltip(emoji, reaction) {
 	if (reaction.count === 1) {
-		return `${reaction.users} reacted with ${emoji}`;
+		return `${reaction.users} commented with ${emoji}`;
 	}
-	return `${reaction.count} people reacted with ${emoji}: ${reaction.users}`;
+	return `${reaction.count} people commented with ${emoji}: ${reaction.users}`;
 }
 
-// Add or remove reaction
-async function toggleReaction(emoji) {
+// Add or remove emoji comment
+async function toggleComment(emoji) {
 	const hasReacted = userHasReacted(emoji);
 
 	if (hasReacted) {
-		await removeReaction(emoji);
+		await removeComment(emoji);
 	} else {
-		await addReaction(emoji);
+		await addComment(emoji);
 	}
 }
 
-// Add reaction to message
-async function addReaction(emoji) {
+// Add emoji comment to message
+async function addComment(emoji) {
 	try {
 		const userId = localStorage.getItem('userId');
-		await apiService.reactions.toggle(
+		await apiService.comments.toggle(
 			userId,
 			props.chat.id,
 			props.msg.id,
@@ -318,15 +239,15 @@ async function addReaction(emoji) {
 		showReactionPicker.value = false;
 		emit('reaction-changed');
 	} catch (error) {
-		console.error('Failed to add reaction:', error);
+		console.error('Failed to add emoji comment:', error);
 	}
 }
 
-// Remove reaction from message
-async function removeReaction(emoji) {
+// Remove emoji comment from message
+async function removeComment(emoji) {
 	try {
 		const userId = localStorage.getItem('userId');
-		await apiService.reactions.remove(
+		await apiService.comments.remove(
 			userId,
 			props.chat.id,
 			props.msg.id,
@@ -335,7 +256,7 @@ async function removeReaction(emoji) {
 
 		emit('reaction-changed');
 	} catch (error) {
-		console.error('Failed to remove reaction:', error);
+		console.error('Failed to remove emoji comment:', error);
 	}
 }
 
@@ -445,76 +366,9 @@ function getConversationDisplayName(conversation) {
 	return 'Unknown Conversation';
 }
 
-// Comment-related computed properties
-const commentCount = computed(() => {
-	return comments.value.length;
-});
+// Comment functionality removed
 
-// Comment-related methods
-function toggleComments() {
-	showComments.value = !showComments.value;
-	// Comments are already loaded from props.msg.comments via watcher
-}
-
-async function loadComments() {
-	// Comments are loaded as part of message data from the backend
-	// The message object should include a comments array with comment objects
-	if (props.msg.comments && Array.isArray(props.msg.comments)) {
-		comments.value = props.msg.comments;
-	} else {
-		// Initialize empty comments array if not present in message data
-		comments.value = [];
-	}
-}
-
-async function addComment() {
-	if (!newCommentText.value.trim()) return;
-
-	isAddingComment.value = true;
-
-	try {
-		const response = await apiService.comments.add(
-			currentUserId,
-			props.chat.id,
-			props.msg.id,
-			newCommentText.value.trim()
-		);
-
-		comments.value.push(response);
-		newCommentText.value = '';
-
-		// Emit event to notify parent component of new comment
-		emit('comment-added', { messageId: props.msg.id, comment: response });
-	} catch (error) {
-		console.error('Failed to add comment:', error);
-	} finally {
-		isAddingComment.value = false;
-	}
-}
-
-async function deleteComment(commentId) {
-	if (!confirm('Delete this comment?')) return;
-
-	try {
-		await apiService.comments.delete(
-			currentUserId,
-			props.chat.id,
-			props.msg.id,
-			commentId
-		);
-
-		comments.value = comments.value.filter((c) => c.id !== commentId);
-
-		// Emit event to notify parent component of comment deletion
-		emit('comment-deleted', { messageId: props.msg.id, commentId });
-	} catch (error) {
-		console.error('Failed to delete comment:', error);
-	}
-}
-
-function canDeleteComment(comment) {
-	return comment.author.id === currentUserId;
-}
+// Comments removed
 
 function formatTime(timestamp) {
 	if (!timestamp) return '';
@@ -712,91 +566,5 @@ function formatTime(timestamp) {
 	background: rgba(0, 0, 0, 0.9);
 }
 
-/* Comments Section */
-.comments-section {
-	margin-left: 8px;
-	border-left: 2px solid var(--border-color);
-	padding-left: 8px;
-}
-
-.comments-toggle {
-	color: var(--text-muted);
-	text-decoration: none;
-	font-size: 0.75rem;
-	padding: 0.25rem 0;
-}
-
-.comments-toggle:hover {
-	color: var(--text-primary);
-	background: transparent;
-}
-
-.comments-list {
-	max-height: 200px;
-	overflow-y: auto;
-}
-
-.comment-item {
-	background: var(--bg-message);
-	border: 1px solid var(--border-color);
-	border-radius: 8px;
-	padding: 0.5rem;
-	margin-bottom: 0.5rem;
-}
-
-.comment-header {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	margin-bottom: 0.25rem;
-}
-
-.comment-author {
-	font-weight: 600;
-	font-size: 0.75rem;
-	color: var(--text-primary);
-}
-
-.comment-time {
-	font-size: 0.625rem;
-	color: var(--text-muted);
-}
-
-.comment-delete {
-	margin-left: auto;
-	padding: 0;
-	color: var(--text-muted);
-	font-size: 0.75rem;
-}
-
-.comment-delete:hover {
-	color: var(--danger);
-	background: transparent;
-}
-
-.comment-text {
-	font-size: 0.8rem;
-	color: var(--text-primary);
-	word-break: break-word;
-}
-
-.add-comment-form {
-	border-top: 1px solid var(--border-color);
-	padding-top: 0.5rem;
-}
-
-.comment-input-group {
-	display: flex;
-	gap: 0.5rem;
-}
-
-.comment-input-group .form-control {
-	flex: 1;
-	font-size: 0.75rem;
-}
-
-.comment-input-group .btn {
-	font-size: 0.75rem;
-	padding: 0.25rem 0.75rem;
-}
+/* Comments removed */
 </style>

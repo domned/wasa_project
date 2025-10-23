@@ -128,11 +128,6 @@ func (rt *_router) serveWs(w http.ResponseWriter, r *http.Request, ps httprouter
 		hub.register <- client
 	}
 
-	// Update user's last_seen timestamp
-	if err := rt.db.UpdateUserLastSeen(userID); err != nil {
-		rt.sysLogger.LogWarn("Failed to update last_seen for WebSocket user " + userID + ": " + err.Error())
-	}
-
 	// Start goroutines for reading and writing
 	go client.writePump()
 	go client.readPump()

@@ -57,7 +57,7 @@ type Message struct {
 	ImageUrl       string                 `json:"imageUrl,omitempty"`
 	SenderUsername string                 `json:"senderUsername"`
 	Time           string                 `json:"time,omitempty"`
-	Reactions      map[string]interface{} `json:"reactions,omitempty"`
+	Comments       map[string]interface{} `json:"comments,omitempty"`
 	IsRead         bool                   `json:"isRead,omitempty"`
 	ReadBy         []string               `json:"readBy,omitempty"`
 }
@@ -102,17 +102,7 @@ type AppDatabase interface {
 	AddContact(user User, contact User) (User, error)
 	ListContacts(user User) ([]User, error)
 	RemoveContact(user User, contact User) (User, error)
-	GetAllConversations() ([]Conversation, error)
 	GetRawDB() *sql.DB
-
-	// Admin methods
-	GetUserCount() (int, error)
-	GetConversationCount() (int, error)
-	GetMessageCount() (int, error)
-	GetRecentLogs(limit int) ([]LogEntry, error)
-	AddLogEntry(level, message string) error
-	UpdateUserLastSeen(userID string) error
-	GetActiveUserCount() (int, error)
 }
 
 type appdbimpl struct {

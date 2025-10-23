@@ -119,10 +119,10 @@ export const conversations = {
 	 * @param {string} newUserId - UUID of user to add
 	 * @returns {Promise<{message: string}>}
 	 */
-	async addMember(userId, conversationId, newUserId) {
+	async addMember(userId, conversationId, newUserName) {
 		const response = await axios.post(
 			`/users/${userId}/conversations/${conversationId}/members`,
-			{ userId: newUserId }
+			{ name: newUserName }
 		);
 		return response.data;
 	},
@@ -176,10 +176,7 @@ export const conversations = {
 	 * Get all conversations in the system (admin function)
 	 * @returns {Promise<Conversation[]>}
 	 */
-	async getAll() {
-		const response = await axios.get('/conversations/all');
-		return response.data;
-	},
+	// Removed admin-only function getAll()
 };
 
 // ============ MESSAGES ============
@@ -249,7 +246,8 @@ export const messages = {
 };
 
 // ============ REACTIONS ============
-export const reactions = {
+// ============ COMMENTS (emoji) ============
+export const comments = {
 	/**
 	 * Toggle a reaction on a message
 	 * @param {string} userId - User UUID
@@ -260,7 +258,7 @@ export const reactions = {
 	 */
 	async toggle(userId, conversationId, messageId, emoji) {
 		const response = await axios.post(
-			`/users/${userId}/conversations/${conversationId}/messages/${messageId}/reaction`,
+			`/users/${userId}/conversations/${conversationId}/messages/${messageId}/comments`,
 			{ emoji }
 		);
 		return response.data;
@@ -276,41 +274,7 @@ export const reactions = {
 	 */
 	async remove(userId, conversationId, messageId, emoji) {
 		const response = await axios.delete(
-			`/users/${userId}/conversations/${conversationId}/messages/${messageId}/reaction/${emoji}`
-		);
-		return response.data;
-	},
-};
-
-// ============ COMMENTS ============
-export const comments = {
-	/**
-	 * Add a comment to a message
-	 * @param {string} userId - User UUID
-	 * @param {string} conversationId - Conversation UUID
-	 * @param {string} messageId - Message UUID
-	 * @param {string} content - Comment content
-	 * @returns {Promise<Comment>}
-	 */
-	async add(userId, conversationId, messageId, content) {
-		const response = await axios.post(
-			`/users/${userId}/conversations/${conversationId}/messages/${messageId}/comments`,
-			{ content }
-		);
-		return response.data;
-	},
-
-	/**
-	 * Delete a comment (only by commenter)
-	 * @param {string} userId - User UUID
-	 * @param {string} conversationId - Conversation UUID
-	 * @param {string} messageId - Message UUID
-	 * @param {string} commentId - Comment UUID
-	 * @returns {Promise<{message: string}>}
-	 */
-	async delete(userId, conversationId, messageId, commentId) {
-		const response = await axios.delete(
-			`/users/${userId}/conversations/${conversationId}/messages/${messageId}/comments/${commentId}`
+			`/users/${userId}/conversations/${conversationId}/messages/${messageId}/comments/${emoji}`
 		);
 		return response.data;
 	},
@@ -394,90 +358,7 @@ export const health = {
 	 * Get recent system logs
 	 * @returns {Promise<object>} Logs data
 	 */
-	async getLogs() {
-		try {
-			const response = await axios.get('/admin/logs');
-			return {
-				success: true,
-				data: response.data.logs || [],
-			};
-		} catch (error) {
-			console.error('Failed to get logs:', error);
-			return {
-				success: false,
-				error: error.response?.data?.message || 'Failed to get logs',
-				data: [],
-			};
-		}
-	},
-
-	/**
-	 * Get system health status
-	 * @returns {Promise<object>} Health status data
-	 */
-	async checkHealth() {
-		try {
-			const response = await axios.get('/admin/health');
-			return {
-				success: true,
-				data: response.data,
-			};
-		} catch (error) {
-			console.error('Failed to check health:', error);
-			return {
-				success: false,
-				error:
-					error.response?.data?.message || 'Failed to check health',
-				data: {
-					database: 'Error',
-					websocket: 'Error',
-					api: 'Error',
-					uptime: 'Unknown',
-				},
-			};
-		}
-	},
-
-	/**
-	 * Get system statistics
-	 * @returns {Promise<object>} System statistics
-	 */
-	async getStats() {
-		try {
-			const response = await axios.get('/admin/stats');
-			return {
-				success: true,
-				data: response.data,
-			};
-		} catch (error) {
-			console.error('Failed to get stats:', error);
-			return {
-				success: false,
-				error: error.response?.data?.message || 'Failed to get stats',
-				data: {
-					total_users: 0,
-					active_users: 0,
-					total_conversations: 0,
-					total_messages: 0,
-					active_connections: 0,
-				},
-			};
-		}
-	},
-
-	/**
-	 * Get currently online users
-	 * @returns {Promise<string[]>} List of online user IDs
-	 */
-	async getOnlineUsers() {
-		try {
-			const response = await axios.get('/admin/online-users');
-			return response.data;
-		} catch (error) {
-			console.error('Failed to get online users:', error);
-			return [];
-		}
-	},
+	// Removed admin endpoints: getLogs, checkHealth, getStats, getOnlineUsers
 };
 
 // Default export with all services
@@ -487,7 +368,6 @@ const apiService = {
 	users,
 	conversations,
 	messages,
-	reactions,
 	comments,
 	contacts,
 	websocket,

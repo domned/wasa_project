@@ -84,14 +84,14 @@ func (rt *_router) getMessages(w http.ResponseWriter, r *http.Request, ps httpro
 			isMessageRead = false
 		}
 
-		messages = append(messages, map[string]interface{}{
+	    messages = append(messages, map[string]interface{}{
 			"id":             msg.Id,
 			"senderId":       msg.SenderId,
 			"text":           msg.Text,
 			"imageUrl":       msg.ImageUrl,
 			"senderUsername": msg.SenderUsername,
 			"time":           msg.Time,
-			"reactions":      reactions,
+		    "comments":       reactions,
 			"isRead":         isMessageRead,
 		})
 	}

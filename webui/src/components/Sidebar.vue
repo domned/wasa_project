@@ -32,13 +32,6 @@
 			</div>
 			<div class="user-actions">
 				<button
-					class="admin-btn"
-					@click="$emit('show-admin')"
-					title="Admin Dashboard"
-				>
-					⚙️
-				</button>
-				<button
 					class="theme-toggle-btn"
 					@click="toggleTheme"
 					:title="
@@ -118,13 +111,21 @@
 						<span class="chat-name">
 							{{ getChatDisplayName(chat) }}
 						</span>
-						<button
-							class="delete-chat-btn"
-							@click.stop="deleteChat(chat)"
-							title="Delete conversation"
-						>
-							🗑️
-						</button>
+						<div class="chat-name-actions">
+							<span
+								class="chat-timestamp"
+								v-if="chat.lastMessageTime"
+							>
+								{{ formatTimestamp(chat.lastMessageTime) }}
+							</span>
+							<button
+								class="delete-chat-btn"
+								@click.stop="deleteChat(chat)"
+								title="Delete conversation"
+							>
+								🗑️
+							</button>
+						</div>
 					</div>
 					<div class="chat-last-row">
 						<span class="last-message" v-if="chat.lastMessage">
@@ -210,7 +211,9 @@
 				<button
 					class="btn btn-primary"
 					@click="updateUsername"
-					:disabled="isUpdating || newUsername.length < 3 || isNameTaken"
+					:disabled="
+						isUpdating || newUsername.length < 3 || isNameTaken
+					"
 				>
 					{{ isUpdating ? 'Updating...' : 'Save' }}
 				</button>
@@ -321,9 +324,7 @@ function getChatDisplayName(chat) {
 		const other = chat.participants.find(
 			(p) => p && p.id && p.id !== props.userId
 		);
-		return other && other.username
-			? other.username
-			: 'Unknown User';
+		return other && other.username ? other.username : 'Unknown User';
 	}
 
 	// If group chat (more than 2 participants), use the provided name
@@ -336,9 +337,7 @@ function getChatDisplayName(chat) {
 			.filter((p) => p && p.id && p.id !== props.userId)
 			.map((p) => p.username || 'Unknown')
 			.filter(Boolean);
-		return otherUsers.length > 0
-			? otherUsers.join(', ')
-			: 'Group Chat';
+		return otherUsers.length > 0 ? otherUsers.join(', ') : 'Group Chat';
 	}
 
 	// Fallback
@@ -355,6 +354,44 @@ function getLastMessagePreview(text, imageUrl) {
 	return text.length > maxLength
 		? text.substring(0, maxLength) + '...'
 		: text;
+}
+
+// Format timestamp for display in chat list
+function formatTimestamp(timestamp) {
+	if (!timestamp) return '';
+
+	const messageTime = parseInt(timestamp);
+	const now = Date.now();
+	const diff = now - messageTime;
+
+	// Less than 1 minute
+	if (diff < 60000) {
+		return 'Just now';
+	}
+
+	// Less than 1 hour
+	if (diff < 3600000) {
+		const minutes = Math.floor(diff / 60000);
+		return `${minutes}m ago`;
+	}
+
+	// Less than 24 hours
+	if (diff < 86400000) {
+		const hours = Math.floor(diff / 3600000);
+		return `${hours}h ago`;
+	}
+
+	// Less than 7 days
+	if (diff < 604800000) {
+		const days = Math.floor(diff / 86400000);
+		return `${days}d ago`;
+	}
+
+	// More than 7 days, show date
+	const date = new Date(messageTime);
+	const month = date.getMonth() + 1;
+	const day = date.getDate();
+	return `${month}/${day}`;
 }
 
 // Sort chats by last message time (newest first)
@@ -434,7 +471,6 @@ const emit = defineEmits([
 	'logout',
 	'username-updated',
 	'photo-updated',
-	'show-admin',
 ]);
 const props = defineProps({
 	userId: {
@@ -471,7 +507,8 @@ const isUpdating = ref(false);
 const editError = ref('');
 const existingUsernames = ref([]);
 const isNameTaken = computed(() => {
-	if (!newUsername.value || newUsername.value === props.username) return false;
+	if (!newUsername.value || newUsername.value === props.username)
+		return false;
 	return existingUsernames.value.some(
 		(u) => u.toLowerCase() === newUsername.value.toLowerCase()
 	);
@@ -661,7 +698,8 @@ async function updateUsername() {
 		if (resp && resp.status === 400) {
 			editError.value = msg || 'Username already in use';
 		} else {
-			editError.value = msg || 'Failed to update username. Please try again.';
+			editError.value =
+				msg || 'Failed to update username. Please try again.';
 		}
 	} finally {
 		isUpdating.value = false;
@@ -789,7 +827,6 @@ defineExpose({
 	align-items: center;
 }
 
-.admin-btn,
 .theme-toggle-btn,
 .logout-btn {
 	background: none;
@@ -911,7 +948,22 @@ defineExpose({
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	gap: 8px;
 }
+
+.chat-name-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.chat-timestamp {
+	font-size: 11px;
+	color: var(--text-muted);
+	white-space: nowrap;
+	font-weight: 400;
+}
+
 .delete-chat-btn {
 	background: none;
 	border: none;

@@ -96,12 +96,7 @@ class WebSocketService {
 			case 'reaction_removed':
 				this.emit('reactionChanged', payload);
 				break;
-			case 'comment_added':
-				this.emit('commentAdded', payload);
-				break;
-			case 'comment_deleted':
-				this.emit('commentDeleted', payload);
-				break;
+			// Comment events removed
 			case 'user_online':
 				this.emit('userOnline', payload);
 				break;

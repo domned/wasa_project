@@ -17,14 +17,11 @@
 				@logout="handleLogout"
 				@username-updated="handleUsernameUpdated"
 				@photo-updated="handlePhotoUpdated"
-				@show-admin="showAdminDashboard"
 			/>
 		</aside>
 		<div class="divider"></div>
 		<main class="chat-root">
-			<AdminDashboard v-if="isAdminView" />
 			<ChatView
-				v-else
 				:chat="selectedChat"
 				:messages="selectedMessages"
 				@message-sent="handleMessageSent"
@@ -44,7 +41,6 @@ import webSocketService from './services/websocket.js';
 import Login from './components/Login.vue';
 import Sidebar from './components/Sidebar.vue';
 import ChatView from './components/ChatView.vue';
-import AdminDashboard from './components/AdminDashboard.vue';
 import CreateConversation from './components/CreateConversation.vue';
 
 // Check if user is logged in
@@ -57,7 +53,7 @@ const selectedChat = ref(null);
 const selectedMessages = ref([]);
 const chats = ref([]); // Store all chats from Sidebar
 const sidebarRef = ref(null);
-const isAdminView = ref(false);
+// Admin view removed
 
 // Check login status on app start
 function checkLoginStatus() {
@@ -169,9 +165,6 @@ function handleChatsLoaded(loadedChats) {
 }
 
 async function selectChat(chatId) {
-	// Exit admin view when selecting a chat
-	isAdminView.value = false;
-
 	selectedChatId.value = chatId;
 	// Find the chat object by id
 	selectedChat.value = chats.value.find((c) => c.id === chatId) || null;
@@ -266,13 +259,7 @@ function handleChatDeleted(chatId) {
 	chats.value = chats.value.filter((chat) => chat.id !== chatId);
 }
 
-function showAdminDashboard() {
-	isAdminView.value = true;
-	// Clear chat selection when viewing admin
-	selectedChatId.value = null;
-	selectedChat.value = null;
-	selectedMessages.value = [];
-}
+// Admin dashboard removed
 
 // WebSocket Integration
 function initializeWebSocket() {
@@ -287,8 +274,7 @@ function initializeWebSocket() {
 	webSocketService.on('message', handleWebSocketMessage);
 	webSocketService.on('messageDeleted', handleWebSocketMessageDeleted);
 	webSocketService.on('reactionChanged', handleWebSocketReactionChanged);
-	webSocketService.on('commentAdded', handleWebSocketCommentAdded);
-	webSocketService.on('commentDeleted', handleWebSocketCommentDeleted);
+	// Comment events removed
 	webSocketService.on('userOnline', handleWebSocketUserOnline);
 	webSocketService.on('userOffline', handleWebSocketUserOffline);
 	webSocketService.on(
@@ -345,16 +331,7 @@ function handleWebSocketReactionChanged(reactionData) {
 	}
 }
 
-function handleWebSocketCommentAdded(commentData) {
-	// Comments are handled within MessageBubble component
-	// This could be used for notifications or badges
-	console.log('New comment added:', commentData);
-}
-
-function handleWebSocketCommentDeleted(commentData) {
-	// Comments are handled within MessageBubble component
-	console.log('Comment deleted:', commentData);
-}
+// Comment handlers removed
 
 function handleWebSocketUserOnline(userData) {
 	console.log(`User ${userData.username} is now online`);
