@@ -36,13 +36,15 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 		user = users[0]
 		rt.sysLogger.LogInfo("User " + req.Name + " logged in successfully")
 	} else {
-		user, err = rt.db.SetMyUserName(req.Name)
+		// Auto-create user on login
+		newUser, err := rt.db.SetMyUserName(req.Name)
 		if err != nil {
-			rt.sysLogger.LogError("Failed to create new user " + req.Name + ": " + err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			rt.sysLogger.LogError("Failed to create user: " + err.Error())
+			http.Error(w, "failed to create user", http.StatusInternalServerError)
 			return
 		}
-		rt.sysLogger.LogInfo("New user " + req.Name + " registered and logged in")
+		user = newUser
+		rt.sysLogger.LogInfo("Auto-created and logged in user: " + req.Name)
 	}
 
 	resp := map[string]string{"identifier": user.UId}

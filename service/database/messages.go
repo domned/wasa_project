@@ -95,7 +95,7 @@ func (db *appdbimpl) ForwardMessage(cid string, user User, mid string) (Conversa
 
 func (db *appdbimpl) GetConversationMessages(cid string) ([]Message, error) {
 	rows, err := db.c.Query(`
-		SELECT m.id, m.conversation_id, m.message, m.sender_id, m.timestamp, u.username
+		SELECT m.id, m.conversation_id, m.message, COALESCE(m.image_url, '') as image_url, m.sender_id, m.timestamp, u.username
 		FROM messages m 
 		JOIN users u ON m.sender_id = u.id 
 		WHERE m.conversation_id = ? 
@@ -111,7 +111,7 @@ func (db *appdbimpl) GetConversationMessages(cid string) ([]Message, error) {
 		var sender User
 		var timestamp time.Time
 		var conversationId string
-		if scanErr := rows.Scan(&m.Id, &conversationId, &m.Text, &sender.UId, &timestamp, &sender.Username); scanErr != nil {
+		if scanErr := rows.Scan(&m.Id, &conversationId, &m.Text, &m.ImageUrl, &sender.UId, &timestamp, &sender.Username); scanErr != nil {
 			return nil, scanErr
 		}
 		m.SenderId = sender.UId
@@ -179,13 +179,9 @@ func (db *appdbimpl) UncommentMessage(cid string, user User, mid string, comment
 
 func (db *appdbimpl) MarkMessageAsRead(messageId string, userId string) error {
 	_, err := db.c.Exec(`
-		UPDATE conversation_participants 
-		SET last_read_timestamp = (
-			SELECT timestamp FROM messages WHERE id = ?
-		) 
-		WHERE user_id = ? AND conversation_id = (
-			SELECT conversation_id FROM messages WHERE id = ?
-		)`, messageId, userId, messageId)
+		INSERT OR REPLACE INTO read_status (id, message_id, user_id, read_at) 
+		VALUES (?, ?, ?, strftime('%s', 'now'))`,
+		messageId+"-"+userId, messageId, userId)
 
 	return err
 }

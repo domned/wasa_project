@@ -79,7 +79,7 @@ func (db *appdbimpl) GetMyConversations(user User) ([]Conversation, error) {
 		) latest ON c.id = latest.conversation_id
 		LEFT JOIN messages m ON latest.conversation_id = m.conversation_id AND latest.max_timestamp = m.timestamp
 		LEFT JOIN users u ON m.sender_id = u.id
-		ORDER BY m.timestamp DESC NULLS LAST`)
+		ORDER BY (m.timestamp IS NULL), m.timestamp DESC`)
 
 	if err != nil {
 		return nil, err

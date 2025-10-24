@@ -35,12 +35,19 @@ instance.interceptors.response.use(
 		return response;
 	},
 	(error) => {
-		// If we get a 401 Unauthorized, clear localStorage and reload
+		// If we get a 401 Unauthorized, clear localStorage and reload for protected endpoints
 		if (error.response && error.response.status === 401) {
-			localStorage.removeItem('userId');
-			localStorage.removeItem('currentUsername');
-			// Optionally redirect to login or reload the page
-			window.location.reload();
+			// Do not force a reload for public endpoints like /session (login) or /liveness
+			const publicEndpoints = ['/session', '/liveness'];
+			const url = error.config && error.config.url ? error.config.url : '';
+			const isPublicEndpoint = publicEndpoints.some((endpoint) => url.includes(endpoint));
+
+			if (!isPublicEndpoint) {
+				localStorage.removeItem('userId');
+				localStorage.removeItem('currentUsername');
+				// Optionally redirect to login or reload the page
+				window.location.reload();
+			}
 		}
 		return Promise.reject(error);
 	}

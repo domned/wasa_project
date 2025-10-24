@@ -34,10 +34,7 @@
 
 			<div class="login-info">
 				<p>
-					<small
-						>No password required. If the username doesn't exist, a
-						new account will be created.</small
-					>
+					<small>No password required.</small>
 				</p>
 			</div>
 		</div>
@@ -69,6 +66,12 @@ export default {
 				return;
 			}
 
+			// Validate username characters (alphanumeric and underscore only)
+			if (!/^[a-zA-Z0-9_]+$/.test(this.username)) {
+				this.error = 'Username can only contain letters, numbers, and underscores';
+				return;
+			}
+
 			this.isLoading = true;
 			this.error = '';
 
@@ -83,25 +86,22 @@ export default {
 				// Store user data in localStorage
 				localStorage.setItem('userId', userId);
 				localStorage.setItem('currentUsername', this.username);
-				console.log(
-					'Stored in localStorage. UserId:',
-					userId,
-					'Username:',
-					this.username
-				);
+				console.log('Stored in localStorage. UserId:', userId, 'Username:', this.username);
 
 				// Emit success event with user data
-				console.log('Emitting login-success with:', {
-					userId,
-					username: this.username,
-				});
 				this.$emit('login-success', {
 					userId: userId,
 					username: this.username,
 				});
 			} catch (err) {
 				console.error('Login error:', err);
-				this.error = 'Login failed. Please try again.';
+				// Prefer server-provided message when available
+				if (err && err.response && err.response.data) {
+					const body = err.response.data
+					this.error = body.message || body.error || String(err.message || 'Login failed.');
+				} else {
+					this.error = String(err.message || 'Login failed. Please try again.')
+				}
 			} finally {
 				this.isLoading = false;
 			}
