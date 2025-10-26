@@ -440,6 +440,7 @@ paths:
             summary: API root endpoint
             description: Returns basic API information and status
             operationId: getApiRoot
+            security: []
             responses:
                 '200':
                     description: API information
@@ -485,6 +486,7 @@ paths:
                 identifier is returned.
                 If the user exists, the user identifier is returned.
             operationId: doLogin
+            security: []
             requestBody:
                 description: User login details
                 content:
@@ -702,6 +704,50 @@ paths:
                                 maxItems: 1000
                 '404':
                     description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /users/{id}/conversations/{conversationId}:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  minLength: 36
+                  maxLength: 36
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  minLength: 36
+                  maxLength: 36
+                  format: uuid
+        get:
+            tags: ['Conversations']
+            summary: Get conversation by id
+            description: Get full details for a single conversation (must be a participant)
+            operationId: getConversation
+            responses:
+                '200':
+                    description: Conversation details
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Conversation'
+                '403':
+                    description: User is not a participant in the conversation
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Conversation not found
                     content:
                         application/json:
                             schema:
@@ -1067,7 +1113,7 @@ paths:
             tags: ['Comments']
             summary: Toggle comment (emoji)
             description: Toggle an emoji comment on a message. If the user has already commented with this emoji, it will be removed. If not, it will be added.
-            operationId: reactToMessage
+            operationId: commentMessage
             requestBody:
                 description: Emoji to toggle
                 content:
@@ -1133,7 +1179,7 @@ paths:
             tags: ['Comments']
             summary: Remove comment (emoji)
             description: Remove a specific emoji comment from a message
-            operationId: removeReaction
+            operationId: uncommentMessage
             responses:
                 '204':
                     description: Comment removed successfully (no content)
@@ -1251,8 +1297,7 @@ paths:
             description: >-
                 Establish a WebSocket connection for real-time communication
             operationId: serveWs
-            security:
-                - bearerAuth: []
+            security: []
             responses:
                 '101':
                     description: WebSocket connection established
@@ -1284,6 +1329,86 @@ paths:
             summary: Health check
             description: Health check endpoint for monitoring server status
             operationId: liveness
+            security: []
             responses:
                 '200':
-                    $ref: '#/components/responses/SuccessMessage'
+                    description: Server is healthy
+
+    /users/{id}/conversations/{conversationId}/members:
+        parameters:
+            - name: id
+              in: path
+              description: UUID of the user
+              required: true
+              schema:
+                  type: string
+                  minLength: 36
+                  maxLength: 36
+                  format: uuid
+            - name: conversationId
+              in: path
+              description: UUID of the conversation
+              required: true
+              schema:
+                  type: string
+                  minLength: 36
+                  maxLength: 36
+                  format: uuid
+        post:
+            tags: ['Conversations']
+            summary: Add member to group
+            description: Add a user to a group conversation by username
+            operationId: addToGroup
+            requestBody:
+                description: Member to add, referenced by username
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: Username of the member to add
+                                    pattern: '^[a-zA-Z0-9_]+$'
+                                    minLength: 3
+                                    maxLength: 16
+                            required: [name]
+                required: true
+            responses:
+                '201':
+                    description: Member added successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                description: UUID of the added user
+                                format: uuid
+                                pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                                minLength: 36
+                                maxLength: 36
+                '400':
+                    description: Invalid request data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: User not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        delete:
+            tags: ['Conversations']
+            summary: Leave group
+            description: Remove the current user from the group conversation
+            operationId: leaveGroup
+            responses:
+                '204':
+                    description: Left group successfully (no content)
+                '404':
+                    description: Conversation or user not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'

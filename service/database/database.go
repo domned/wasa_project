@@ -262,6 +262,30 @@ func New(db *sql.DB) (AppDatabase, error) {
 		// Otherwise, column already exists, continue
 	}
 
+	// Seed example users (idempotent)
+	seedUsers := []User{
+		{UId: "f2555a8a-2e66-4326-9588-20e7e298d615", Username: "Alice", Picture: "https://i.pravatar.cc/150?img=1"},
+		{UId: "7b8f3c2a-4d1e-4c37-9b6a-12a34bcdef01", Username: "Bob", Picture: "https://i.pravatar.cc/150?img=2"},
+		{UId: "2c9a1e34-5b67-48f2-9a01-23c45def6789", Username: "Charlie", Picture: "https://i.pravatar.cc/150?img=3"},
+		{UId: "9d8e7c6b-5a4f-4321-8b7a-6543210fedcb", Username: "Diana", Picture: "https://i.pravatar.cc/150?img=4"},
+		{UId: "0a1b2c3d-4e5f-6789-abcd-ef0123456789", Username: "Eve", Picture: "https://i.pravatar.cc/150?img=5"},
+		{UId: "aabbccdd-eeff-0011-2233-445566778899", Username: "Frank", Picture: "https://i.pravatar.cc/150?img=6"},
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("error starting transaction for seeding users: %w", err)
+	}
+	for _, u := range seedUsers {
+		if _, err := tx.Exec("INSERT OR IGNORE INTO users (id, username, picture) VALUES (?, ?, ?)", u.UId, u.Username, u.Picture); err != nil {
+			_ = tx.Rollback()
+			return nil, fmt.Errorf("error seeding example users: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("error committing seed users: %w", err)
+	}
+
 	return &appdbimpl{
 		c: db,
 	}, nil
