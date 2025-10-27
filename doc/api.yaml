@@ -526,6 +526,7 @@ paths:
             summary: List all users
             description: Returns a list of all users in the system
             operationId: listUsers
+            security: []
             responses:
                 '200':
                     description: List of users

@@ -35,7 +35,7 @@ go.work
 *.db
 data/
 
-# Shell scripts (except docker-entrypoint.sh needed by backend container)
+# Shell scripts
 *.sh
 !docker-entrypoint.sh
 

@@ -26,6 +26,18 @@
 							people to create a group!</small
 						>
 					</div>
+					<div
+						v-if="availableUsers.length === 0"
+						class="alert alert-danger"
+						role="alert"
+					>
+						<strong>⚠️ No users available!</strong>
+						<p class="mb-0 mt-2">
+							Error in DB creation. Please run
+							<code>docker-compose down -v</code> and rebuild the
+							container.
+						</p>
+					</div>
 					<form @submit.prevent="createConversation">
 						<div class="mb-3">
 							<label for="conversationName" class="form-label">

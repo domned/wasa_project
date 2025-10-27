@@ -11,10 +11,9 @@ func (rt *_router) Handler() http.Handler {
 	r.GET("/", rt.wrap(rt.getApiRoot))
 	r.POST("/session", rt.wrap(rt.doLogin))
 	r.GET("/liveness", rt.wrap(rt.liveness))
+	r.GET("/users", rt.wrap(rt.listUsers))
 
 	// Authenticated routes
-	r.GET("/users", rt.wrapAuth(rt.listUsers))
-
 	// User specific routes
 	r.PUT("/users/:id", rt.wrapAuth(rt.setMyUserName))
 	r.PUT("/users/:id/photo", rt.wrapAuth(rt.setMyPhoto))
