@@ -262,8 +262,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		// Otherwise, column already exists, continue
 	}
 
-	// Seed example users (idempotent) - COMMENTED OUT FOR TESTING ERROR MESSAGE
-	/*
+	// Seed example users (idempotent on every start)
 	seedUsers := []User{
 		{UId: "f2555a8a-2e66-4326-9588-20e7e298d615", Username: "Alice", Picture: "https://i.pravatar.cc/150?img=1"},
 		{UId: "7b8f3c2a-4d1e-4c37-9b6a-12a34bcdef01", Username: "Bob", Picture: "https://i.pravatar.cc/150?img=2"},
@@ -286,7 +285,6 @@ func New(db *sql.DB) (AppDatabase, error) {
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("error committing seed users: %w", err)
 	}
-	*/
 
 	return &appdbimpl{
 		c: db,
