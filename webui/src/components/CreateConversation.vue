@@ -26,6 +26,26 @@
 							people to create a group!</small
 						>
 					</div>
+					<div class="d-flex justify-content-end mb-2">
+						<button
+							type="button"
+							class="btn btn-sm btn-outline-secondary"
+							:disabled="isSeeding"
+							@click="seedTestUsers"
+						>
+							<span
+								class="spinner-border spinner-border-sm me-2"
+								role="status"
+								aria-hidden="true"
+								v-if="isSeeding"
+							></span>
+							{{
+								isSeeding
+									? 'Populating…'
+									: 'Populate test users'
+							}}
+						</button>
+					</div>
 					<div
 						v-if="availableUsers.length === 0"
 						class="alert alert-danger"
@@ -33,9 +53,9 @@
 					>
 						<strong>⚠️ No users available!</strong>
 						<p class="mb-0 mt-2">
-							Error in DB creation. Please run
-							<code>docker-compose down -v</code> and rebuild the
-							container.
+							If no users are available and the populate button is
+							not working, log out using the door in the top left
+							and log back in using another username.
 						</p>
 					</div>
 					<form @submit.prevent="createConversation">
@@ -160,8 +180,39 @@ const selectedUser = ref('');
 const participants = ref([]);
 const availableUsers = ref([]);
 const isCreating = ref(false);
+const isSeeding = ref(false);
+const seedAttempted = ref(false);
 
-const loadUsers = async () => {
+// Ensure a baseline set of test users exists by logging them in if missing
+const ensureTestUsersIfNeeded = async (allUsers) => {
+	try {
+		// If there are fewer than 3 total users, create a few test users
+		if (
+			!seedAttempted.value &&
+			Array.isArray(allUsers) &&
+			allUsers.length < 3
+		) {
+			seedAttempted.value = true; // prevent loops
+			const testNames = [
+				'Alice',
+				'Bob',
+				'Charlie',
+				'Diana',
+				'Eve',
+				'Frank',
+			];
+			await Promise.allSettled(
+				testNames.map((name) => api.auth.login(name))
+			);
+			// After attempting to create, reload users
+			await loadUsers(true);
+		}
+	} catch (e) {
+		console.error('Failed ensuring test users:', e);
+	}
+};
+
+const loadUsers = async (skipEnsure = false) => {
 	try {
 		const users = await api.users.listAll();
 		const currentUserId = localStorage.getItem('userId');
@@ -169,8 +220,26 @@ const loadUsers = async () => {
 		availableUsers.value = users.filter(
 			(user) => user.id !== currentUserId
 		);
+		if (!skipEnsure) {
+			await ensureTestUsersIfNeeded(users);
+		}
 	} catch (error) {
 		console.error('Failed to load users:', error);
+	}
+};
+
+// Manual seeding action from the UI button
+const seedTestUsers = async () => {
+	if (isSeeding.value) return;
+	try {
+		isSeeding.value = true;
+		const testNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
+		await Promise.allSettled(testNames.map((name) => api.auth.login(name)));
+		await loadUsers(true);
+	} catch (e) {
+		console.error('Populate test users failed:', e);
+	} finally {
+		isSeeding.value = false;
 	}
 };
 

@@ -34,6 +34,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -262,7 +263,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 		// Otherwise, column already exists, continue
 	}
 
-	// Seed example users (idempotent on every start)
+	// Ensure example users exist on every start; INSERT OR IGNORE makes this idempotent.
+	log.Println("ensuring example users exist")
 	seedUsers := []User{
 		{UId: "f2555a8a-2e66-4326-9588-20e7e298d615", Username: "Alice", Picture: "https://i.pravatar.cc/150?img=1"},
 		{UId: "7b8f3c2a-4d1e-4c37-9b6a-12a34bcdef01", Username: "Bob", Picture: "https://i.pravatar.cc/150?img=2"},
@@ -276,15 +278,22 @@ func New(db *sql.DB) (AppDatabase, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error starting transaction for seeding users: %w", err)
 	}
+	inserted := 0
 	for _, u := range seedUsers {
-		if _, err := tx.Exec("INSERT OR IGNORE INTO users (id, username, picture) VALUES (?, ?, ?)", u.UId, u.Username, u.Picture); err != nil {
+		res, err := tx.Exec("INSERT OR IGNORE INTO users (id, username, picture) VALUES (?, ?, ?)", u.UId, u.Username, u.Picture)
+		if err != nil {
 			_ = tx.Rollback()
 			return nil, fmt.Errorf("error seeding example users: %w", err)
+		}
+		af, _ := res.RowsAffected()
+		if af > 0 {
+			inserted += int(af)
 		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("error committing seed users: %w", err)
 	}
+	log.Printf("example users ensured (inserted %d, skipped %d)\n", inserted, len(seedUsers)-inserted)
 
 	return &appdbimpl{
 		c: db,
