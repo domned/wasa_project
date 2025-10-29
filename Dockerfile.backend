@@ -38,14 +38,9 @@ COPY --from=builder /app/webapi ./webapi
 # Copy any necessary config files
 COPY --from=builder /app/demo/config.yml ./demo/
 
-# Copy entrypoint script that will recreate the DB on container start
-COPY docker-entrypoint.sh ./docker-entrypoint.sh
-
 # Make the binary executable and change ownership
 RUN chmod +x ./webapi && \
     chown appuser:appuser ./webapi
-RUN chmod +x ./docker-entrypoint.sh && \
-    chown appuser:appuser ./docker-entrypoint.sh
 
 # Create directory for database and set permissions
 RUN mkdir -p /data && \
@@ -61,6 +56,5 @@ EXPOSE 3000
 ENV CFG_DB_FILENAME=/data/app.db
 ENV PORT=3000
 
-# Use entrypoint to remove DB and then run the application
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# Run the application
 CMD ["/app/webapi"]
