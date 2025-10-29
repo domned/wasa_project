@@ -263,8 +263,9 @@ func New(db *sql.DB) (AppDatabase, error) {
 		// Otherwise, column already exists, continue
 	}
 
-	// Ensure example users exist on every start; INSERT OR IGNORE makes this idempotent.
-	log.Println("ensuring example users exist")
+	// Always ensure test users exist on startup (idempotent via INSERT OR IGNORE)
+	// This guarantees fresh deployments have users to test with
+	log.Println("[DB INIT] Ensuring example test users exist...")
 	seedUsers := []User{
 		{UId: "f2555a8a-2e66-4326-9588-20e7e298d615", Username: "Alice", Picture: "https://i.pravatar.cc/150?img=1"},
 		{UId: "7b8f3c2a-4d1e-4c37-9b6a-12a34bcdef01", Username: "Bob", Picture: "https://i.pravatar.cc/150?img=2"},
@@ -293,7 +294,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("error committing seed users: %w", err)
 	}
-	log.Printf("example users ensured (inserted %d, skipped %d)\n", inserted, len(seedUsers)-inserted)
+	log.Printf("[DB INIT] ✓ Test users ready: inserted %d new, skipped %d existing (total: %d test users)\n", inserted, len(seedUsers)-inserted, len(seedUsers))
 
 	return &appdbimpl{
 		c: db,

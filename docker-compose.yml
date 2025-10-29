@@ -1,62 +1,16 @@
+version: "3.8"
 services:
     backend:
         build:
             context: .
             dockerfile: Dockerfile.backend
-        container_name: wasa-backend
         ports:
             - "3000:3000"
-        volumes:
-            - data:/data
-        environment:
-            - CFG_DB_FILENAME=/data/app.db
-            - PORT=3000
-        restart: unless-stopped
-        networks:
-            wasa-network:
-                aliases:
-                    - backend
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    "wget -qO- http://localhost:3000/liveness >/dev/null 2>&1",
-                ]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-
     frontend:
         build:
             context: .
             dockerfile: Dockerfile.frontend
-        container_name: wasa-frontend
+            args:
+                VITE_API_BASE_URL: "http://backend:3000"
         ports:
             - "80:80"
-        depends_on:
-            backend:
-                condition: service_healthy
-        restart: unless-stopped
-        networks:
-            - wasa-network
-        healthcheck:
-            test:
-                [
-                    "CMD",
-                    "wget",
-                    "--quiet",
-                    "--tries=1",
-                    "--spider",
-                    "http://localhost:80",
-                ]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-
-volumes:
-    data:
-        driver: local
-
-networks:
-    wasa-network:
-        driver: bridge

@@ -96,7 +96,6 @@ class WebSocketService {
 			case 'reaction_removed':
 				this.emit('reactionChanged', payload);
 				break;
-			// Comment events removed
 			case 'user_online':
 				this.emit('userOnline', payload);
 				break;
