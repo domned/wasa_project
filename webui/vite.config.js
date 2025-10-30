@@ -14,15 +14,9 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
 		},
 	};
 	ret.define = {
-		// Use different API URLs for development and production
-		__API_URL__: JSON.stringify(
-			mode === 'production' ? '/api' : 'http://localhost:3000'
-		),
-	};
-	ret.server = {
-		proxy: {
-			'/users': 'http://localhost:3000',
-		},
+		// Do not modify this constant, it is used in the evaluation.
+		__API_URL__: JSON.stringify('http://localhost:3000'),
 	};
 	return ret;
 });
+\
